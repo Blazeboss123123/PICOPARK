@@ -8,6 +8,7 @@ const THEMES = ['Snowpeak', 'Autumn Woods', 'Crystal Caves', 'Sky Ruins', 'Ember
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => v < t ? Math.min(t, v + d) : Math.max(t, v - d);
 const ov = (a, b) => a.x < b.x + b.w - 1e-6 && a.x + a.w > b.x + 1e-6 && a.y < b.y + b.h - 1e-6 && a.y + a.h > b.y + 1e-6;
+const MAXP = 8;
 const SH = n => n >= 3 ? 5 : 4; // wall height that needs everyone stacked: 2 players reach 4 tiles, 3 players reach 5
 
 // ---------- level builder ----------
@@ -26,6 +27,8 @@ function B(w, rows) {
   return L;
 }
 const S0 = (L, x, floor) => L.e({ t: 'spawn', x, floor: floor || 15 });
+const exactN = n => n <= 3 ? 2 : n <= 5 ? 3 : 4; // riders for 'exact' lifts
+const raftW = n => Math.max(6, n);
 const stackHint = (s) => s > 4 ? 'Too high! Stack three high' : 'Too high? Stand on a friend!';
 
 const LEVELS = [
@@ -45,9 +48,9 @@ const LEVELS = [
    L.gr(0, 103, 15).f(16, 0, 16, 8).f(16, 9, 16, 14, 'A').gr(26, 31, 15 - s).f(46, 0, 46, 8).f(46, 9, 46, 14, 'B').gr(88, 103, 9);
    for (let i = 0; i < 6; i++) L.f(82 + i, 14 - i, 82 + i, 14, 'c');
    S0(L, 2); L.e({ t: 'plate', x: 8, floor: 15, sig: 'a' }).e({ t: 'plate', x: 20, floor: 15, sig: 'a' }).e({ t: 'plate', x: 28, floor: 15 - s, sig: 'b', timer: n >= 3 ? 6 : 5 });
-   for (let i = 0; i < n; i++) L.e({ t: 'plate', x: 52 + i * 8, floor: 15, sig: 'c', and: true });
+   const sp = n > 4 ? 4 : 8; for (let i = 0; i < n; i++) L.e({ t: 'plate', x: 52 + i * sp, floor: 15, sig: 'c', and: true });
    L.e({ t: 'key', x: 94, floor: 9 }).e({ t: 'door', x: 98, floor: 9 });
-   return L.h(11, 8, 'Hold it open for the others', 'x:22').h(28, 15 - s - 3, 'Timer up top. Boost someone, then run!', 'x:47').h(56 + (n - 2) * 4, 9, n + ' buttons, all at once', 'c'); } },
+   return L.h(11, 8, 'Hold it open for the others', 'x:22').h(28, 15 - s - 3, 'Timer up top. Boost someone, then run!', 'x:47').h(53 + (n - 1) * sp / 2, 9, n + ' buttons, all at once', 'c'); } },
  { name: 'Red light', goal: 'Freeze on red, or everyone restarts', build(n) {
    const s = SH(n), U = 15 - s, L = B(112); L.flags.light = { g: 3.4, y: 1.0, r: 2.4 };
    L.gr(0, 111, 15).pit(18, 21, 15, 2).f(30, 13, 31, 14).pit(40, 43, 15, 2).st(56 - (s - 1), 15, s - 1, 'a').gr(56, 89, U).pit(66, 69, U, 2).f(78, U - s, 83, U - s);
@@ -88,7 +91,7 @@ const LEVELS = [
     .e({ t: 'key', x: 78, floor: 2 }).e({ t: 'door', x: 92, floor: 6 });
    return L.h(10, 9, 'Bounce!', 'x:14').h(34, 3.5, 'It crumbles. Keep moving!', 'x:45').h(52, 7, 'Hold the plate to open the lid', 'a').h(68, 2.5, 'Pull it to open the lid for good', 'a'); } },
  { name: 'Head count', goal: 'Platforms that need an exact number of riders', build(n) {
-   const a = n === 4 ? 3 : 2, L = B(90); L.gr(0, 13, 15).gr(18, 35, 9).gr(36, 55, 17).spk(36, 55, 16).gr(56, 89, 9).f(66, 9, 70, 17, '.').f(71, 3, 80, 8);
+   const a = exactN(n), L = B(90); L.gr(0, 13, 15).gr(18, 35, 9).gr(36, 55, 17).spk(36, 55, 16).gr(56, 89, 9).f(66, 9, 70, 17, '.').f(71, 3, 80, 8);
    S0(L, 2); L.e({ t: 'lift', x: 14, y: 15, w: 4, x2: 14, y2: 9, need: a, exact: true, spd: 30 })
     .e({ t: 'lift', x: 36, y: 9, w: 3, x2: 53, y2: 9, need: 1, exact: true, spd: 32 })
     .e({ t: 'lift', x: 66, y: 9, w: 5, x2: 66, y2: 3, need: 'all', exact: true, spd: 30 })
@@ -96,13 +99,15 @@ const LEVELS = [
    return L.h(16, 9.5, 'Exactly ' + a + ' riders. No more, no less', 'x:18').h(45, 5, 'Only 1 at a time', 'x:56').h(68, 6, 'Everyone!', 'key'); } },
  // ===== World 3: Crystal Caves =====
  { name: 'Colour code', goal: 'Everyone has a job only they can do', build(n) {
-   const L = B(100); L.gr(0, 99, 15).f(18, 15, 22, 15, '1').f(18, 16, 22, 16, '.').f(30, 0, 30, 8).f(30, 9, 30, 14, 'A').f(42, 0, 42, 8).f(42, 9, 42, 14, 'B');
+   const X = n >= 5 ? 12 : 0, L = B(100 + X); L.gr(0, 99 + X, 15).f(18, 15, 22, 15, '1').f(18, 16, 22, 16, '.').f(30, 0, 30, 8).f(30, 9, 30, 14, 'A').f(42, 0, 42, 8).f(42, 9, 42, 14, 'B');
    if (n >= 3) L.f(50, 15, 54, 15, '3').f(50, 16, 54, 16, '.').f(60, 0, 60, 8).f(60, 9, 60, 14, 'C');
    if (n >= 4) L.f(64, 15, 68, 15, '4').f(64, 16, 68, 16, '.').f(72, 0, 72, 8).f(72, 9, 72, 14, 'D');
    L.f(78, 15, 82, 15, '2').f(78, 16, 82, 16, '.');
    S0(L, 2); L.e({ t: 'lever', x: 20, floor: 17, sig: 'a' }).e({ t: 'plate', x: 36, floor: 15, sig: 'b', color: 1 }).e({ t: 'plate', x: 45, floor: 15, sig: 'b', color: 0 });
    if (n >= 3) L.e({ t: 'lever', x: 52, floor: 17, sig: 'c' }); if (n >= 4) L.e({ t: 'lever', x: 66, floor: 17, sig: 'd' });
-   L.e({ t: 'key', x: 80, floor: 17 }).e({ t: 'door', x: 92, floor: 15 });
+   L.e({ t: 'key', x: 80, floor: 17 }).e({ t: 'door', x: 92 + X, floor: 15 });
+   if (n >= 5) { L.f(98, 0, 98, 8).f(98, 9, 98, 14, 'E'); for (let k = 4; k < n; k++) L.e({ t: 'plate', x: 85 + (k - 4) * 3, floor: 15, sig: 'e', color: k, and: true });
+     L.h(90, 8.5, ['Purple', 'Green', 'Blue', 'White'].slice(0, n - 4).join(', ') + ': all on your colour', 'e'); }
    L.h(20, 9, 'Only orange can drop through orange glass', 'a').h(39, 7.5, 'Teal holds, then orange holds', 'x:47').h(80, 9, 'Only teal can reach the key', 'key');
    if (n >= 3) L.h(52, 9, 'Pink: your turn', 'c'); if (n >= 4) L.h(66, 9, 'Yellow: your turn', 'd');
    return L; } },
@@ -124,6 +129,10 @@ const LEVELS = [
    const plates = [{ x: 3, floor: 23 - s }, { x: 56, floor: 32 }];
    if (n >= 3) plates.splice(1, 0, { x: 30, floor: 10 });
    if (n >= 4) plates.push({ x: 17, floor: 32 });
+   if (n >= 5) plates.push({ x: 37, floor: 32 });
+   if (n >= 6) plates.push({ x: 52, floor: 23 });
+   if (n >= 7) plates.push({ x: 34, floor: 10 });
+   if (n >= 8) plates.push({ x: 8, floor: 23 - s });
    plates.forEach(p => L.e({ t: 'plate', x: p.x, floor: p.floor, sig: 'a', and: true }));
    L.e({ t: 'lift', x: 22, y: 32, w: 3, x2: 22, y2: 10, need: 1, exact: true, spd: 40 }).e({ t: 'bridge', x: 40, y: 32, w: 13, max: 1 })
     .e({ t: 'key', x: 46, floor: 23 - s }).e({ t: 'door', x: 30, floor: 32 });
@@ -179,8 +188,8 @@ const LEVELS = [
  // ===== World 5: Ember Forge =====
  { name: 'Row together', goal: 'The raft only moves when everyone pushes the same way', build(n) {
    const s = SH(n), L = B(120); L.gr(0, 9, 15).lava(10, 55).gr(56, 66, 15).f(59, 15 - s, 63, 15 - s).lava(67, 105).gr(106, 119, 15);
-   S0(L, 2); L.e({ t: 'raft', x: 10, y: 15, w: 6, x2: 50 }).e({ t: 'saw', x: 25, y: 9.5, x2: 25, y2: 14.6, spd: 1.3 }).e({ t: 'saw', x: 40, y: 9.5, x2: 40, y2: 14.6, spd: 1.0 })
-    .e({ t: 'key', x: 61, floor: 15 - s }).e({ t: 'raft', x: 67, y: 15, w: 6, x2: 100 }).e({ t: 'saw', x: 80, y: 9.5, x2: 80, y2: 14.6, spd: 1.5 }).e({ t: 'saw', x: 92, y: 9.5, x2: 92, y2: 14.6, spd: 1.1 })
+   S0(L, 2); L.e({ t: 'raft', x: 10, y: 15, w: raftW(n), x2: 56 - raftW(n) }).e({ t: 'saw', x: 25, y: 9.5, x2: 25, y2: 14.6, spd: 1.3 }).e({ t: 'saw', x: 40, y: 9.5, x2: 40, y2: 14.6, spd: 1.0 })
+    .e({ t: 'key', x: 61, floor: 15 - s }).e({ t: 'raft', x: 67, y: 15, w: raftW(n), x2: 106 - raftW(n) }).e({ t: 'saw', x: 80, y: 9.5, x2: 80, y2: 14.6, spd: 1.5 }).e({ t: 'saw', x: 92, y: 9.5, x2: 92, y2: 14.6, spd: 1.1 })
     .e({ t: 'door', x: 112, floor: 15 });
    return L.h(10, 9, 'Everyone aboard, then all push the same way', 'x:30').h(24, 6, 'Stop for the saws!', 'x:48').h(61, 15 - s - 3.5, 'Stack for the key', 'key'); } },
  { name: 'Conveyor', goal: 'Belts keep moving. So should you', build(n) {
@@ -210,18 +219,18 @@ const LEVELS = [
    const s = SH(n), L = B(140); L.gr(0, 9, 15).lava(10, 39)
     .f(10, 14, 13, 14, ']').f(16, 13, 19, 13, '[').f(22, 12, 25, 12, ']').f(28, 13, 31, 13, '[').f(34, 14, 37, 14, ']')
     .gr(40, 49, 15).gr(54, 79, 8).f(58, 0, 74, 3).lava(80, 115).gr(116, 139, 15).f(124, 15 - s, 128, 15 - s);
-   S0(L, 2); L.e({ t: 'lift', x: 50, y: 15, w: 4, x2: 50, y2: 8, need: n === 4 ? 3 : 2, exact: true, spd: 32 })
+   S0(L, 2); L.e({ t: 'lift', x: 50, y: 15, w: 4, x2: 50, y2: 8, need: exactN(n), exact: true, spd: 32 })
     .e({ t: 'crush', x: 62, y: 4, w: 3, h: 2, drop: 2, period: 2.6, off: 0 }).e({ t: 'crush', x: 69, y: 4, w: 3, h: 2, drop: 2, period: 2.6, off: 1.3 })
-    .e({ t: 'raft', x: 80, y: 15, w: 6, x2: 110 }).e({ t: 'saw', x: 95, y: 9.5, x2: 95, y2: 14.6, spd: 1.2 })
+    .e({ t: 'raft', x: 80, y: 15, w: raftW(n), x2: 116 - raftW(n) }).e({ t: 'saw', x: 95, y: 9.5, x2: 95, y2: 14.6, spd: 1.2 })
     .e({ t: 'key', x: 126, floor: 15 - s }).e({ t: 'door', x: 134, floor: 15 });
-   return L.h(6, 8, 'Jump together!', 'x:20').h(51, 9.5, 'Exactly ' + (n === 4 ? 3 : 2) + ' riders', 'x:54').h(82, 5, 'Drop onto the raft', 'x:116').h(126, 15 - s - 3.5, 'Stack for the key', 'key'); } },
+   return L.h(6, 8, 'Jump together!', 'x:20').h(51, 9.5, 'Exactly ' + exactN(n) + ' riders', 'x:54').h(82, 5, 'Drop onto the raft', 'x:116').h(126, 15 - s - 3.5, 'Stack for the key', 'key'); } },
 ];
 LEVELS.forEach((L, i) => { L.theme = Math.floor(i / 5); });
 
 // ---------- game ----------
 function createGame(li, n) {
   const g = { li, players: [], fx: [], S: null, noWalls: false };
-  compile(g, Math.max(2, Math.min(4, n || 2)));
+  compile(g, Math.max(2, Math.min(MAXP, n || 2)));
   reset(g, false);
   return g;
 }
@@ -260,7 +269,7 @@ function compile(g, n) {
 }
 // Rebuild the level for the current number of players (puzzles scale with team size).
 function adapt(g) {
-  const n = Math.max(2, Math.min(4, g.players.length));
+  const n = Math.max(2, Math.min(MAXP, g.players.length));
   if (n === g.n) return false;
   compile(g, n); reset(g, true); fx(g, 'adapt', 0, 0, n);
   return true;
@@ -282,7 +291,12 @@ function reset(g, keep) {
   g.crumbTiles.forEach(i => S.crumb[i] = [0, 0]);
   g.crateOn = S.crates.map(() => null);
   g.players.forEach(p => { Object.assign(p, { vx: 0, vy: 0, dead: 99, inside: false, on: null, grounded: false, dx: 0, squash: 0, coyote: 0, buffer: 0, row: 0 }); });
-  g.players.forEach(p => { p.y = g.spawn.floor * TS - PH; for (let i = 0; i < 20; i++) { p.x = g.spawn.x * TS + i * 12; if (free(g, p)) break; } p.dead = 0; });
+  // line up on the start ground; anyone who doesn't fit stands on a friend's head
+  g.players.forEach(p => { const y0 = g.spawn.floor * TS - PH; let done = false;
+    for (let i = 0; i < 20 && !done; i++) { p.x = g.spawn.x * TS + i * 12; p.y = y0; done = free(g, p) && groundOf(g, p).length > 0; }
+    if (!done) for (const q of g.players) { if (q === p || q.dead) continue; p.x = q.x; p.y = q.y - PH - 0.5; if (free(g, p)) { done = true; break; } }
+    if (!done) { p.x = g.spawn.x * TS; p.y = y0; }
+    p.dead = 0; });
   camera(g, 0, true);
 }
 
@@ -309,7 +323,8 @@ function place(g, p) {
   if (sx >= S.cam - 5 && sx <= S.cam + VW / S.zoom - 60) c.push(...line);
   hosts.forEach(o => c.push([o.x, o.y - PH - 1], [o.x - 12, o.y], [o.x + 12, o.y]));
   c.push(...line);
-  for (const [a, b] of c) { p.x = a; p.y = b; if (free(g, p)) break; }
+  let pick = null; for (const [a, b] of c) { p.x = a; p.y = b; if (free(g, p)) { if (groundOf(g, p).length) { pick = [a, b]; break; } if (!pick) pick = [a, b]; } }
+  if (pick) { p.x = pick[0]; p.y = pick[1]; }
   p.vx = p.vy = 0; p.dead = 0; p.on = null; p.inside = false;
 }
 
@@ -446,7 +461,8 @@ function updSignals(g, dt) {
     sg.open = approach(sg.open, sg.gate ? 0 : 1, dt * 4); sg.show = approach(sg.show, sg.on ? 1 : 0, dt * 3);
   }
 }
-function ridersOf(g, plat) { let n = 0; for (const p of g.players) if (alive(p) && p.on === plat) n++; return n; }
+function baseOf(p) { let o = p.on, k = 0; while (o && o.isPlayer && k++ < MAXP) { if (!alive(o)) return null; o = o.on; } return o; }
+function ridersOf(g, plat) { let n = 0; for (const p of g.players) if (alive(p) && p.on && baseOf(p) === plat) n++; return n; }
 function nonRiderBlock(g, plat, nx, ny) {
   const r = { x: nx, y: ny, w: plat.w, h: plat.h };
   for (const p of g.players) if (alive(p) && p.on !== plat && ov(p, r)) return true;
@@ -652,6 +668,6 @@ function setInput(g, slot, x, jump, down, q) {
 }
 function clearEdges(g) { for (const p of g.players) { p.input.jumpP = false; p.input.downP = false; } }
 
-const api = { TS, VW, VH, ROWS, STEP, PW, PH, LEVELS, THEMES, createGame, compile, adapt, reset, step, camera, addPlayer, removePlayer, place, snapshot, serialize, applySnapshot, setInput, clearEdges, sawPos, crushPhase, tileRect, ov, needOf, predictStep, SH };
+const api = { MAXP, TS, VW, VH, ROWS, STEP, PW, PH, LEVELS, THEMES, createGame, compile, adapt, reset, step, camera, addPlayer, removePlayer, place, snapshot, serialize, applySnapshot, setInput, clearEdges, sawPos, crushPhase, tileRect, ov, needOf, predictStep, SH };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HP = api;
 })(typeof window !== 'undefined' ? window : globalThis);

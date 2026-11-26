@@ -93,9 +93,9 @@ function leave(c) {
   broadcastRoom(room);
 }
 function join(c, room, name) {
-  if (room.clients.size >= 4) return c.ws.send(JSON.stringify({ t: 'err', msg: 'That room is full (4 players max)' }));
+  if (room.clients.size >= HP.MAXP) return c.ws.send(JSON.stringify({ t: 'err', msg: 'That room is full (' + HP.MAXP + ' players max)' }));
   const used = new Set([...room.clients].map(k => k.slot));
-  c.slot = [0, 1, 2, 3].find(s => !used.has(s)); c.name = clean(name); c.room = room; room.clients.add(c);
+  c.slot = [...Array(HP.MAXP).keys()].find(s => !used.has(s)); c.name = clean(name); c.room = room; room.clients.add(c);
   if (room.host == null) room.host = c.slot;
   if (room.game) HP.addPlayer(room.game, c.slot);
   broadcastRoom(room);

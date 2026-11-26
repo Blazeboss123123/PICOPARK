@@ -1,8 +1,8 @@
 # Huddle Peak
 
-A co-op pixel platformer for 2–4 players. You stack on each other, push crates together, hold doors and carry a key to the exit, and if anyone dies, everyone restarts.
+A co-op pixel platformer for 2–8 players. You stack on each other, push crates together, hold doors and carry a key to the exit, and if anyone dies, everyone restarts.
 
-It has 25 levels across 5 worlds, local play (shared keyboard or gamepads) and online rooms with a lobby.
+It has 25 levels across 5 worlds, local play (up to 4 people on one keyboard plus up to 4 gamepads) and online rooms of up to 8 with a lobby.
 
 | World | Levels |
 |---|---|
@@ -14,13 +14,15 @@ It has 25 levels across 5 worlds, local play (shared keyboard or gamepads) and o
 
 ## Teamwork that scales with the team
 
-Every level is rebuilt for the number of players (2, 3 or 4). If someone joins or leaves mid-level, the level restarts with the new layout:
+Every level is rebuilt for the number of players (2 to 8). If someone joins or leaves mid-level, the level restarts with the new layout:
 
 - **Walls:** two players can stack 4 tiles high and three can stack 5, so walls and key shelves grow with the team.
 - **Crates:** marked crates need everyone pushing.
-- **Buttons:** "everyone on a button at once" doors get one button per player, spread across the level.
-- **Exact-count platforms:** the numbers change with the team size.
-- **Colour roles:** pink and yellow get their own jobs when they're playing.
+- **Buttons:** "everyone on a button at once" doors get one button per player, spread across the level (eight far-apart buttons in Spread out with a full team).
+- **Exact-count platforms:** the numbers change with the team size (2, 3 or 4 riders).
+- **Lifts and rafts:** friends standing on a rider's head count as riders, so big teams can huddle onto a lift by stacking. Rafts get wider for teams over 6.
+- **Colour roles:** pink and yellow get their own jobs when they're playing; with 5 to 8 players, purple, green, blue and white each have a colour button only they can press.
+- **Spawning:** anyone who doesn't fit on the start ledge appears standing on a friend's head.
 
 The camera follows everyone and zooms out as the team spreads, including on the tall levels (Spread out, The climb).
 
