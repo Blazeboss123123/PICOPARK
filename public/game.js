@@ -3,7 +3,7 @@
 'use strict';
 const TS = 10, VW = 320, VH = 180, ROWS = 18, STEP = 1 / 120;
 const G = 900, JUMP = 244, SPEED = 78, MAXFALL = 320, SPRING = 400, ROPE = 56, CRATE_SPEED = 24, BELT = 40, RAFT = 40;
-const PW = 10, PH = 14;
+const PW = 10, PH = 14, JUMP_RISE = 38; // a normal jump peaks about 33 units up
 const THEMES = ['Snowpeak', 'Autumn Woods', 'Crystal Caves', 'Sky Ruins', 'Ember Forge'];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => v < t ? Math.min(t, v + d) : Math.max(t, v - d);
@@ -337,10 +337,25 @@ function camera(g, dt, snap) {
   }
   const act = g.players.filter(alive);
   if (!act.length) { if (snap) { S.cam = clamp(g.spawn.x * TS - 40, 0, Math.max(0, g.LW - VW)); S.camY = clamp(g.spawn.floor * TS - VH + 30, 0, Math.max(0, g.LH - VH)); } return; }
+  // Frame where people stand, not where they jump: an ordinary jump never moves or zooms the camera.
+  const gy = S.camGY || (S.camGY = {});
+  for (const k in gy) if (!act.some(p => p.slot === +k)) delete gy[k];
   let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
-  for (const p of act) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x + p.w); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y + p.h); }
+  for (const p of act) {
+    if (p.grounded || snap || gy[p.slot] == null) gy[p.slot] = p.y;
+    const base = gy[p.slot], fy = p.y > base ? p.y : p.y < base - JUMP_RISE ? p.y + JUMP_RISE : base;
+    x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x + p.w); y0 = Math.min(y0, fy); y1 = Math.max(y1, fy + p.h);
+  }
+  // A few fixed zoom steps. Zoom out at once when needed; zoom back in only after there's been spare room for a while.
   const zt = clamp(Math.min(VW / (x1 - x0 + 110), VH / (y1 - y0 + 80)), g.zMin, 1);
-  S.zoom = snap ? zt : (zt < S.zoom ? approach(S.zoom, zt, dt * 2.2) : approach(S.zoom, zt, dt * 0.5));
+  const ZL = g.zMin >= 0.97 ? [1] : [1, 0.8, 0.64, 0.5].filter(z => z > g.zMin + 0.04).concat([g.zMin]);
+  let ti = ZL.findIndex(z => z <= zt + 1e-6); if (ti < 0) ti = ZL.length - 1;
+  if (snap || S.zl == null || S.zl >= ZL.length) { S.zl = ti; S.zHold = 0; }
+  else if (ti > S.zl) { S.zl = ti; S.zHold = 0; }
+  else if (ti < S.zl && ZL[S.zl - 1] <= zt * 0.88) { S.zHold = (S.zHold || 0) + dt; if (S.zHold > 1.2) { S.zl--; S.zHold = 0; } }
+  else S.zHold = 0;
+  const zg = ZL[S.zl];
+  S.zoom = snap ? zg : approach(S.zoom, zg, dt * (zg < S.zoom ? 1.6 : 0.6));
   const vw = VW / S.zoom, vh = VH / S.zoom, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
   S.cam = clamp(cx - vw / 2, 0, Math.max(0, g.LW - vw));
   S.camY = g.LH >= vh ? clamp(cy - vh / 2 - 10, 0, g.LH - vh) : g.LH - vh;

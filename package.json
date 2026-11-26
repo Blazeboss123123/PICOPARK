@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/mech.js && node test/mech2.js && node test/mech3.js && node test/mech4.js && node test/mech5.js",
+    "test": "node test/mech.js && node test/mech2.js && node test/mech3.js && node test/mech4.js && node test/mech5.js && node test/cam.js",
     "build:standalone": "node build-standalone.js"
   },
   "engines": { "node": ">=18" },

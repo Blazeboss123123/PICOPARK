@@ -400,8 +400,8 @@ function showLobby(){setKeys(true);screen='lobby';const L=H.LEVELS[net.level];co
  if(net.host){p.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>send({t:'pick',level:+b.dataset.lv}));p.querySelector('#bStart').onclick=()=>send({t:'start',level:net.level})}
  p.querySelector('#bLeave').onclick=leaveRoom}
 let camC=null;
-function clientCam(g,dt){const S=g.S,key=g.li+'-'+g.n;if(!camC||camC.key!==key||S.restartT>0){camC={key,cam:S.cam,camY:S.camY||0,zoom:S.zoom||1,snap:true}}
- S.cam=camC.cam;S.camY=camC.camY;S.zoom=camC.zoom;const t=S.t;H.camera(g,Math.min(dt,0.05),camC.snap);S.t=t;camC.snap=false;camC.cam=S.cam;camC.camY=S.camY;camC.zoom=S.zoom}
+function clientCam(g,dt){const S=g.S,key=g.li+'-'+g.n;if(!camC||camC.key!==key||S.restartT>0){camC={key,cam:S.cam,camY:S.camY||0,zoom:S.zoom||1,zl:null,zHold:0,gy:{},snap:true}}
+ S.cam=camC.cam;S.camY=camC.camY;S.zoom=camC.zoom;S.zl=camC.zl;S.zHold=camC.zHold;S.camGY=camC.gy;const t=S.t;H.camera(g,Math.min(dt,0.05),camC.snap);S.t=t;camC.snap=false;camC.cam=S.cam;camC.camY=S.camY;camC.zoom=S.zoom;camC.zl=S.zl;camC.zHold=S.zHold;camC.gy=S.camGY}
 function interp(){const sn=net.snaps;if(!sn.length)return;const tgt=performance.now()-70;let a=sn[0],b=sn[sn.length-1];
  for(let i=0;i<sn.length-1;i++){if(sn[i].at<=tgt&&sn[i+1].at>=tgt){a=sn[i];b=sn[i+1];break}}
  if(tgt>=b.at)a=b;const al=a===b?1:clamp((tgt-a.at)/(b.at-a.at),0,1),L=(u,v)=>u+(v-u)*al;
