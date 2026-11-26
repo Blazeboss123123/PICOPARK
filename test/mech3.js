@@ -26,8 +26,8 @@ function groupHop(g,hops,opts){opts=opts||{};for(let h=0;h<hops;h++){const L=g.p
 // Row together: raft 2 reaches far bank
 {const g=G(20);const r=g.S.rafts[1];put(g,0,r.x+12,136);put(g,1,r.x+30,136);run(g,0.2);let t=0;while(r.x<999&&t<40&&!g.S.deaths){let go=true;for(const sd of g.sawDefs){const s=HP.sawPos(g,sd),up=Math.sin(g.S.t*sd.spd)<0,over=s.x>r.x-8&&s.x<r.x+r.w+8,ahead=s.x-(r.x+r.w);if(!over&&ahead>0&&ahead<46&&!(up&&s.y<112))go=false}run(g,1/60,()=>({x:go?1:0}));t+=1/60}ok(r.x>=999&&!g.S.deaths,'raft2 to bank x='+f(r.x)+' '+g.S.lastCause);run(g,1.5,()=>({x:1}));ok(P(g,0).x>1060,'stepped off raft');}
 // The peak: duo crosses flips, then drop onto raft
-{const g=G(24);put(g,0,88,136);put(g,1,76,136);run(g,0.2);const okh=groupHop(g,6);ok(okh&&g.players.every(p=>p.x>=400),'peak flips duo '+g.players.map(p=>f(p.x)).join(',')+' '+g.S.lastCause);
- const g2=G(24);const r=g2.S.rafts[0];put(g2,0,775,66);put(g2,1,763,66);run(g2,0.2);run(g2,1.2,()=>({x:1}));run(g2,0.5);ok(!g2.S.deaths&&g2.players.every(p=>p.on===r),'dropped onto raft '+g2.players.map(p=>f(p.x)+','+f(p.y)).join(' ')+' '+g2.S.lastCause);}
+{const g=G(24);g.S.sig.a.latched=true;put(g,0,40,136);put(g,1,25,136);run(g,0.2);run(g,3,(p,t)=>({x:1,j:(t%0.5)<0.3}));ok(g.players.every(p=>p.y<=136-40)&&!g.S.deaths,'peak lever stairs get everyone up '+g.players.map(p=>f(p.x)+','+f(p.y)).join(' '));
+ const g2=G(24);const r=g2.S.rafts[0];put(g2,0,1065,66);put(g2,1,1053,66);run(g2,0.2);run(g2,1.2,()=>({x:1}));run(g2,0.5);ok(!g2.S.deaths&&g2.players.every(p=>p.on===r),'dropped onto raft '+g2.players.map(p=>f(p.x)+','+f(p.y)).join(' ')+' '+g2.S.lastCause);}
 // The climb: timed plate + crumble run with duo
 {const g=G(23);put(g,0,282,126);put(g,1,250,166);run(g,0.3);ok(g.S.sig.c.on,'climb timer on');let k=0;while(k++<720&&!g.players.every(p=>p.x<62)){HP.players;BOT.step(g,p=>({x:-1}))}ok(g.players.every(p=>p.x<62)&&!g.S.deaths&&g.S.sig.c.on,'climb through gate C '+g.players.map(p=>f(p.x)).join(',')+' '+g.S.lastCause+' tmr '+f(g.S.sig.c.tmr));}
 console.log('pass',pass,'fail',fail);

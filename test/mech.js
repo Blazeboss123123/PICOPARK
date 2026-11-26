@@ -40,5 +40,5 @@ let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)
 // L15: alcove lever by P1 jump; P2 can't
 {const g=G(23);put(g,1,108,246);put(g,0,90,246);run(g,0.3);run(g,0.6,(p)=>p.slot===1?{j:1}:null);ok(!g.S.sig.b.on,'climb P2 cannot pull');put(g,1,140,246);put(g,0,108,246);run(g,0.1);run(g,0.6,(p)=>p.slot===0?{j:1}:null);ok(g.S.sig.b.on&&!g.S.sig.b.gate,'climb P1 pulls lever, hatch open '+g.S.lastCause);}
 // key + door + win (L1)
-{const g=G(0);put(g,0,320,96);put(g,1,330,96);g.S.sig.a.latched=true;const k=g.S.key;put(g,0,k.x-5,56);run(g,0.3);ok(g.S.key.carrier===0,'key picked');put(g,0,522,96);put(g,1,528,80);run(g,0.5);ok(g.S.door.open,'door open');run(g,0.1,()=>({d:1}));run(g,0.3);ok(g.S.won,'win');}
+{const g=G(0);put(g,0,320,96);put(g,1,330,96);g.S.sig.a.latched=true;const k=g.S.key;put(g,0,k.x-5,56);run(g,0.3);ok(g.S.key.carrier===0,'key picked');put(g,0,742,96);put(g,1,748,80);run(g,0.5);ok(g.S.door.open,'door open');run(g,0.1,()=>({d:1}));run(g,0.3);ok(g.S.won,'win');}
 console.log('pass',pass,'fail',fail);

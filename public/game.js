@@ -31,12 +31,42 @@ const exactN = n => n <= 3 ? 2 : n <= 5 ? 3 : 4; // riders for 'exact' lifts
 const raftW = n => Math.max(6, n);
 const stackHint = (s) => s > 4 ? 'Too high! Stack three high' : 'Too high? Stand on a friend!';
 
+// ---------- teamwork rooms, added before a level's exit; each returns the x where it ends ----------
+// Held gate: a button on each side holds it open. Someone waits so the others can cross, then gets let through.
+function roomGate(L, x, F, sig) {
+  (L.rooms = L.rooms || []).push({ t: 'gate', x, F, sig });
+  L.f(x + 5, 0, x + 5, F - 7).f(x + 5, F - 6, x + 5, F - 1, sig.toUpperCase());
+  L.e({ t: 'plate', x: x + 1, floor: F, sig }).e({ t: 'plate', x: x + 8, floor: F, sig });
+  L.h(x + 5, F - 8, 'Hold the gate for each other', 'x:' + (x + 11));
+  return x + 12;
+}
+// Crate bridge: a gap too wide to jump; everyone pushes the big crate in to fill it.
+function roomCrate(L, x, F) {
+  (L.rooms = L.rooms || []).push({ t: 'crate', x, F });
+  L.e({ t: 'crate', x: x + 2, floor: F, w: 5, h: 2, need: 'all' });
+  L.f(x + 12, F, x + 16, F + 1, '.').f(x + 12, F + 1, x + 16, F + 1, '^');
+  L.h(x + 9, F - 5, 'Too wide to jump. Everyone push the crate in!', 'x:' + (x + 18));
+  return x + 19;
+}
+// Everyone's buttons at once: one sits on a pillar that needs a boost, the rest are spread along the floor.
+function roomButtons(L, x, F, n, s, sig) {
+  s = Math.min(s, F - 2); // leave headroom under the top of the level
+  (L.rooms = L.rooms || []).push({ t: 'buttons', x, F, sig, s });
+  L.f(x + 3, F - s, x + 6, F - 1);
+  L.e({ t: 'plate', x: x + 4, floor: F - s, sig, and: true });
+  for (let i = 1; i < n; i++) L.e({ t: 'plate', x: x + 6 + i * 3, floor: F, sig, and: true });
+  const gx = x + 9 + (n - 1) * 3;
+  L.f(gx, 0, gx, F - 7).f(gx, Math.max(0, F - 6), gx, F - 1, sig.toUpperCase());
+  L.h(x + 5 + (n - 1) * 1.5, F - s - 4, n + ' buttons at once. One needs a boost', sig);
+  return gx + 2;
+}
+
 const LEVELS = [
  // ===== World 1: Snowpeak =====
  { name: 'Stack up', goal: 'Stand on friends to reach high places', build(n) {
-   const s = SH(n), U = 15 - s, L = B(60); L.gr(0, 16, 15).gr(17, 59, U).st(17 - (s - 1), 15, s - 1, 'a').f(30, U - s, 35, U - s);
-   S0(L, 3); L.e({ t: 'lever', x: 21, floor: U, sig: 'a' }).e({ t: 'key', x: 32, floor: U - s }).e({ t: 'door', x: 52, floor: U });
-   return L.h(8, 9, stackHint(s), 'a').h(21, U - 3.5, 'Pull the lever for the others', 'a').h(32, U - s - 2.5, 'Stack again for the key', 'key').h(53, U - 4.5, 'Everyone press down at the door', 'win'); } },
+   const s = SH(n), U = 15 - s, L = B(84); L.gr(0, 16, 15).gr(17, 83, U).st(17 - (s - 1), 15, s - 1, 'a').f(30, U - s, 35, U - s);
+   S0(L, 3); L.e({ t: 'lever', x: 21, floor: U, sig: 'a' }).e({ t: 'key', x: 32, floor: U - s }).e({ t: 'door', x: 74, floor: U }); roomGate(L, 44, U, 'b');
+   return L.h(8, 9, stackHint(s), 'a').h(21, U - 3.5, 'Pull the lever for the others', 'a').h(32, U - s - 2.5, 'Stack again for the key', 'key').h(75, U - 4.5, 'Everyone press down at the door', 'win'); } },
  { name: 'Heavy lifting', goal: 'Push together, then climb together', build(n) {
    const hw = n >= 3 ? 7 : 6, T = 15 - hw, L = B(78);
    L.gr(0, 77, 15).f(30, 0, 30, 8).f(30, 9, 30, 14, 'A').gr(46, 77, T).f(44, 11, 44, 12, 'b').f(45, T + 1, 45, 12, 'b');
@@ -78,24 +108,24 @@ const LEVELS = [
     .e({ t: 'lift', x: 41, y: 8, w: 5, x2: 58, y2: 8, need: 'all', spd: 30 }).e({ t: 'key', x: 86, floor: 15 - s }).e({ t: 'door', x: 97, floor: 15 });
    return L.h(16, 9, 'Everyone on the lift!', 'x:20').h(44, 4, 'All aboard the ferry', 'x:63').h(86, 15 - s - 3.5, 'Stack up for the key', 'key'); } },
  { name: 'Balance', goal: 'Weigh down one side to lift the other', build(n) {
-   const L = B(64); L.gr(0, 11, 12).gr(16, 21, 12).gr(26, 63, 8).st(19, 12, 3, 'a').f(40, 4, 46, 4);
+   const L = B(100); L.gr(0, 11, 12).gr(16, 21, 12).gr(26, 99, 8).st(19, 12, 3, 'a').f(40, 4, 46, 4);
    S0(L, 0, 12); L.e({ t: 'crate', x: 6, floor: 12, w: 3, h: 2, need: n >= 3 ? 2 : 1, wt: 3 })
     .e({ t: 'bal', ax: 12, ay: 12, bx: 22, by: 12, w: 4, unit: 20, max: 40 }).e({ t: 'lever', x: 30, floor: 8, sig: 'a' })
-    .e({ t: 'key', x: 43, floor: 4 }).e({ t: 'door', x: 56, floor: 8 });
+    .e({ t: 'key', x: 43, floor: 4 }).e({ t: 'door', x: 90, floor: 8 }); roomGate(L, roomCrate(L, 47, 8) + 2, 8, 'b');
    return L.h(8, 6, 'Crates are heavy. Put weight on the left', 'x:26').h(31, 4.5, 'Pull it for whoever is left behind', 'a').h(43, 1.5, 'Stack for the key', 'key'); } },
  { name: 'Springtime', goal: 'Springs, crumbling ground and a lid', build(n) {
-   const L = B(100); L.gr(0, 24, 15).f(12, 14, 12, 14, 'o').gr(14, 24, 7).gr(25, 44, 16).spk(25, 44, 15)
+   const L = B(140); L.gr(0, 24, 15).f(12, 14, 12, 14, 'o').gr(14, 24, 7).gr(25, 44, 16).spk(25, 44, 15)
     .f(25, 7, 27, 7, '%').f(31, 7, 33, 7, '%').f(37, 7, 39, 7, '%').f(43, 7, 44, 7, '%').gr(45, 99, 15).f(60, 14, 60, 14, 'o')
-    .f(55, 9, 58, 9).f(59, 9, 61, 9, 'A').gr(62, 99, 6).f(76, 2, 81, 2);
+    .f(55, 9, 58, 9).f(59, 9, 61, 9, 'A').gr(62, 139, 6).f(76, 2, 81, 2);
    S0(L, 2); L.e({ t: 'plate', x: 47, floor: 15, sig: 'a' }).e({ t: 'lever', x: 67, floor: 6, sig: 'a' })
-    .e({ t: 'key', x: 78, floor: 2 }).e({ t: 'door', x: 92, floor: 6 });
+    .e({ t: 'key', x: 78, floor: 2 }); L.e({ t: 'door', x: roomButtons(L, 86, 6, n, SH(n), 'b') + 4, floor: 6 });
    return L.h(10, 9, 'Bounce!', 'x:14').h(34, 3.5, 'It crumbles. Keep moving!', 'x:45').h(52, 7, 'Hold the plate to open the lid', 'a').h(68, 2.5, 'Pull it to open the lid for good', 'a'); } },
  { name: 'Head count', goal: 'Platforms that need an exact number of riders', build(n) {
-   const a = exactN(n), L = B(90); L.gr(0, 13, 15).gr(18, 35, 9).gr(36, 55, 17).spk(36, 55, 16).gr(56, 89, 9).f(66, 9, 70, 17, '.').f(71, 3, 80, 8);
+   const a = exactN(n), L = B(122); L.gr(0, 13, 15).gr(18, 35, 9).gr(36, 55, 17).spk(36, 55, 16).gr(56, 121, 9).f(66, 9, 70, 17, '.').f(71, 3, 80, 8);
    S0(L, 2); L.e({ t: 'lift', x: 14, y: 15, w: 4, x2: 14, y2: 9, need: a, exact: true, spd: 30 })
     .e({ t: 'lift', x: 36, y: 9, w: 3, x2: 53, y2: 9, need: 1, exact: true, spd: 32 })
     .e({ t: 'lift', x: 66, y: 9, w: 5, x2: 66, y2: 3, need: 'all', exact: true, spd: 30 })
-    .e({ t: 'key', x: 75, floor: 3 }).e({ t: 'door', x: 84, floor: 9 });
+    .e({ t: 'key', x: 75, floor: 3 }).e({ t: 'door', x: roomCrate(L, 88, 9) + 6, floor: 9 });
    return L.h(16, 9.5, 'Exactly ' + a + ' riders. No more, no less', 'x:18').h(45, 5, 'Only 1 at a time', 'x:56').h(68, 6, 'Everyone!', 'key'); } },
  // ===== World 3: Crystal Caves =====
  { name: 'Colour code', goal: 'Everyone has a job only they can do', build(n) {
@@ -151,16 +181,16 @@ const LEVELS = [
    return L.h(12, 8, 'Rope AND red light. Good luck', 'x:20'); } },
  // ===== World 4: Sky Ruins =====
  { name: 'Moving day', goal: 'Ride the moving platforms', build(n) {
-   const L = B(110); L.gr(0, 15, 15).gr(16, 61, 17).spk(16, 61, 16).gr(62, 109, 6).f(86, 2, 96, 2);
+   const L = B(150); L.gr(0, 15, 15).gr(16, 61, 17).spk(16, 61, 16).gr(62, 149, 6).f(86, 2, 96, 2);
    S0(L, 2); L.e({ t: 'lift', x: 16, y: 15, w: 5, x2: 28, y2: 15, need: 0, spd: 30 })
     .e({ t: 'lift', x: 34, y: 15, w: 5, x2: 34, y2: 7, need: 'all', spd: 32 }).e({ t: 'lift', x: 40, y: 7, w: 5, x2: 56, y2: 7, need: 0, spd: 32 })
-    .e({ t: 'saw', x: 72, y: 5, x2: 84, y2: 5, spd: 0.9 }).e({ t: 'key', x: 91, floor: 2 }).e({ t: 'door', x: 102, floor: 6 });
+    .e({ t: 'saw', x: 72, y: 5, x2: 84, y2: 5, spd: 0.9 }).e({ t: 'key', x: 91, floor: 2 }); L.e({ t: 'door', x: roomButtons(L, 99, 6, n, SH(n), 'a') + 5, floor: 6 });
    return L.h(8, 9, 'Hop on and ride', 'x:30').h(36, 10, 'This one needs everybody', 'x:40').h(91, 0.6, 'Stack for the key', 'key'); } },
  { name: 'Updraft', goal: 'Fans blow you up. Hold the plate to power them', build(n) {
-   const L = B(100); L.gr(0, 15, 15).gr(16, 30, 6).gr(31, 46, 17).spk(31, 46, 16).gr(47, 70, 6).gr(71, 99, 10);
+   const L = B(120); L.gr(0, 15, 15).gr(16, 30, 6).gr(31, 46, 17).spk(31, 46, 16).gr(47, 70, 6).gr(71, 119, 10);
    S0(L, 2); L.e({ t: 'fan', x: 14, floor: 15, h: 12 }).e({ t: 'fan', x: 32, floor: 17, w: 4, h: 14, sig: 'a' }).e({ t: 'fan', x: 38, floor: 17, w: 4, h: 14, sig: 'a' }).e({ t: 'fan', x: 43, floor: 17, w: 4, h: 14, sig: 'a' })
     .e({ t: 'plate', x: 26, floor: 6, sig: 'a' }).e({ t: 'plate', x: 48, floor: 6, sig: 'a' }).e({ t: 'fan', x: 58, floor: 6, h: 5, sig: 'b' }).e({ t: 'plate', x: 66, floor: 6, sig: 'b' })
-    .e({ t: 'key', x: 59, floor: 3 }).e({ t: 'door', x: 92, floor: 10 });
+    .e({ t: 'key', x: 59, floor: 3 }).e({ t: 'door', x: roomGate(L, 82, 10, 'c') + 10, floor: 10 });
    return L.h(10, 8, 'Ride the wind', 'x:16').h(38, 3, 'Fans need someone on the plate', 'x:47').h(62, 1.2, 'This fan needs its own plate', 'key'); } },
  { name: 'Relay', goal: 'Pass the key between friends', build(n) {
    const L = B(80); L.flags.pass = true; L.flags.doorSig = 'a';
@@ -193,17 +223,17 @@ const LEVELS = [
     .e({ t: 'door', x: 112, floor: 15 });
    return L.h(10, 9, 'Everyone aboard, then all push the same way', 'x:30').h(24, 6, 'Stop for the saws!', 'x:48').h(61, 15 - s - 3.5, 'Stack for the key', 'key'); } },
  { name: 'Conveyor', goal: 'Belts keep moving. So should you', build(n) {
-   const s = SH(n), U = 15 - s, L = B(110);
-   L.gr(0, 109, 15).f(10, 15, 30, 15, '>').pit(31, 33, 15, 2).f(36, 15, 56, 15, '<').f(58, 15, 70, 15, '<').f(74, 0, 74, 8).f(74, 9, 74, 14, 'A')
-    .f(80, 15, 95, 15, '>').st(96 - (s - 1), 15, s - 1, 'b').gr(96, 109, U).f(100, U - s, 104, U - s);
+   const s = SH(n), U = 15 - s, L = B(140);
+   L.gr(0, 139, 15).f(10, 15, 30, 15, '>').pit(31, 33, 15, 2).f(36, 15, 56, 15, '<').f(58, 15, 70, 15, '<').f(74, 0, 74, 8).f(74, 9, 74, 14, 'A')
+    .f(80, 15, 95, 15, '>').st(96 - (s - 1), 15, s - 1, 'b').gr(96, 139, U).f(100, U - s, 104, U - s);
    S0(L, 2); L.e({ t: 'plate', x: 64, floor: 15, sig: 'a' }).e({ t: 'plate', x: 78, floor: 15, sig: 'a' }).e({ t: 'lever', x: 99, floor: U, sig: 'b' })
-    .e({ t: 'key', x: 102, floor: U - s }).e({ t: 'door', x: 106, floor: U });
+    .e({ t: 'key', x: 102, floor: U - s }).e({ t: 'door', x: roomCrate(L, 107, U) + 6, floor: U });
    return L.h(14, 8, "Don't stand still on the belts", 'x:34').h(64, 8.5, 'Keep walking to stay on the plate', 'x:75').h(88, 7, 'The belt pins you to the wall. Stack!', 'b'); } },
  { name: 'Crushers', goal: 'Watch the rhythm, then run', build(n) {
-   const s = SH(n), L = B(110); L.gr(0, 109, 15).f(14, 0, 60, 5).gr(70, 109, 8).f(86, 8 - s, 92, 8 - s);
+   const s = SH(n), L = B(140); L.gr(0, 139, 15).f(14, 0, 60, 5).gr(70, 139, 8).f(86, 8 - s, 92, 8 - s);
    S0(L, 2); [20, 30, 40, 50].forEach((x, i) => L.e({ t: 'crush', x, y: 6, w: 3, h: 3, drop: 6, period: 3.0, off: i * 0.75, sig: 'a' }));
    L.e({ t: 'plate', x: 57, floor: 15, sig: 'a' }).e({ t: 'crush', x: 64, y: 7, w: 4, h: 2, drop: 6, period: 4.2, off: 0 })
-    .e({ t: 'key', x: 89, floor: 8 - s }).e({ t: 'door', x: 102, floor: 8 });
+    .e({ t: 'key', x: 89, floor: 8 - s }); L.e({ t: 'door', x: roomButtons(L, 95, 8, n, s, 'b') + 5, floor: 8 });
    return L.h(8, 8, 'Wait for it… then go!', 'x:20').h(57, 10.5, 'Hold it to stop the crushers for the others', 'x:62').h(66, 3.5, 'Ride one up', 'x:70').h(89, 8 - s - 3, 'Stack for the key', 'key'); } },
  { name: 'The climb', goal: 'A tower, floor by floor', build(n) {
    const s = SH(n), T2 = 30 - s, T3 = T2 - 8, T4 = T3 - 8, L = B(40, 42);
@@ -215,15 +245,22 @@ const LEVELS = [
     .e({ t: 'saw', x: 17, y: T2 - 1, x2: 30, y2: T2 - 1, spd: 0.8 }).e({ t: 'lever', x: 11, floor: T2 - 3, sig: 'b' }).e({ t: 'plate', x: 28, floor: T3 - s, sig: 'c', timer: n >= 3 ? 6 : 5 })
     .e({ t: 'key', x: 16, floor: T4 - s }).e({ t: 'door', x: 3, floor: T4 });
    return L.h(20, 37, 'Everyone aboard', 'x:15').h(4, 27, stackHint(s), 'a').h(11, T2 - 8.3, 'Orange: jump up and pull', 'b').h(28, T3 - s - 3, 'Timer on top. Then run left!', 'c').h(16, T4 - s - 3, 'Stack for the key', 'key'); } },
- { name: 'The peak', goal: 'The final climb', build(n) {
-   const s = SH(n), L = B(140); L.gr(0, 9, 15).lava(10, 39)
-    .f(10, 14, 13, 14, ']').f(16, 13, 19, 13, '[').f(22, 12, 25, 12, ']').f(28, 13, 31, 13, '[').f(34, 14, 37, 14, ']')
-    .gr(40, 49, 15).gr(54, 79, 8).f(58, 0, 74, 3).lava(80, 115).gr(116, 139, 15).f(124, 15 - s, 128, 15 - s);
-   S0(L, 2); L.e({ t: 'lift', x: 50, y: 15, w: 4, x2: 50, y2: 8, need: exactN(n), exact: true, spd: 32 })
-    .e({ t: 'crush', x: 62, y: 4, w: 3, h: 2, drop: 2, period: 2.6, off: 0 }).e({ t: 'crush', x: 69, y: 4, w: 3, h: 2, drop: 2, period: 2.6, off: 1.3 })
-    .e({ t: 'raft', x: 80, y: 15, w: raftW(n), x2: 116 - raftW(n) }).e({ t: 'saw', x: 95, y: 9.5, x2: 95, y2: 14.6, spd: 1.2 })
-    .e({ t: 'key', x: 126, floor: 15 - s }).e({ t: 'door', x: 134, floor: 15 });
-   return L.h(6, 8, 'Jump together!', 'x:20').h(51, 9.5, 'Exactly ' + exactN(n) + ' riders', 'x:54').h(82, 5, 'Drop onto the raft', 'x:116').h(126, 15 - s - 3.5, 'Stack for the key', 'key'); } },
+ { name: 'The peak', goal: 'Everything you have learned, one last climb', build(n) {
+   const s = SH(n), U = 15 - s, rw = raftW(n), L = B(210), o = 8; // o: extra space after the gate
+   L.gr(0, 209, 15).gr(10, 25, U).st(10 - (s - 1), 15, s - 1, 'a')
+    .f(71 + o, 15, 74 + o, 17, '.').gr(75 + o, 100 + o, 8).f(79 + o, 0, 95 + o, 3).lava(101 + o, 136 + o);
+   S0(L, 2);
+   L.e({ t: 'lever', x: 13, floor: U, sig: 'a' });
+   roomCrate(L, 36, 15);
+   roomGate(L, 57, 15, 'b');
+   L.e({ t: 'lift', x: 71 + o, y: 15, w: 4, x2: 71 + o, y2: 8, need: exactN(n), exact: true, spd: 32 })
+    .e({ t: 'crush', x: 83 + o, y: 4, w: 3, h: 2, drop: 2, period: 2.6, off: 0 }).e({ t: 'crush', x: 90 + o, y: 4, w: 3, h: 2, drop: 2, period: 2.6, off: 1.3 })
+    .e({ t: 'raft', x: 101 + o, y: 15, w: rw, x2: 137 + o - rw }).e({ t: 'saw', x: 112 + o, y: 9.5, x2: 112 + o, y2: 14.6, spd: 1.2 }).e({ t: 'saw', x: 126 + o, y: 9.5, x2: 126 + o, y2: 14.6, spd: 1.5 });
+   const end = roomButtons(L, 140 + o, 15, n, s, 'c');
+   L.f(end + 6, 15 - s, end + 11, 15 - s);
+   L.e({ t: 'key', x: end + 8, floor: 15 - s }).e({ t: 'door', x: end + 18, floor: 15 });
+   return L.h(6, 8, stackHint(s), 'a').h(13, U - 3.5, 'Pull it for the others', 'a').h(72 + o, 5.5, 'Lift: exactly ' + exactN(n) + ' at a time', 'x:' + (76 + o))
+    .h(87 + o, 1.6, 'Time the crushers', 'x:' + (100 + o)).h(112 + o, 5, 'Drop on, then all push the same way', 'x:' + (137 + o)).h(end + 8, 15 - s - 3, 'Stack for the key', 'key'); } },
 ];
 LEVELS.forEach((L, i) => { L.theme = Math.floor(i / 5); });
 
@@ -236,7 +273,7 @@ function createGame(li, n) {
 }
 function compile(g, n) {
   const def = LEVELS[g.li], L = def.build(n);
-  Object.assign(g, { n, name: def.name, goal: def.goal, theme: def.theme, W: L.w, H: L.rows, LW: L.w * TS, LH: L.rows * TS, grid: L.g, hints: L.hints, flags: L.flags });
+  Object.assign(g, { n, name: def.name, goal: def.goal, theme: def.theme, W: L.w, H: L.rows, LW: L.w * TS, LH: L.rows * TS, grid: L.g, hints: L.hints, flags: L.flags, rooms: L.rooms || [] });
   g.zMin = g.flags.scroll ? 1 : Math.max(0.5, VW / g.LW);
   g.spawn = L.ents.find(e => e.t === 'spawn');
   const kd = L.ents.find(e => e.t === 'key'); g.keyHome = { x: kd.x * TS + 5, y: kd.floor * TS - 9 };

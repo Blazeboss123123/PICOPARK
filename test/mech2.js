@@ -50,6 +50,6 @@ const f=v=>Math.round(v*10)/10;
  const g2=G(22);put(g2,0,575,136);put(g2,1,400,136);run(g2,3);ok(g2.S.crush.slice(0,4).every(c=>c.y<=60.5),'plate stops crushers');
  const g3=G(22);put(g3,0,600,136);put(g3,1,560,136);let w=0;while(!(Math.abs(g3.S.crush[4].y-130)<0.5&&HP.crushPhase(g3,4).ph<HP.crushPhase(g3,4).T.waitT+HP.crushPhase(g3,4).T.dropT+0.2)&&w++<2000)run(g3,1/120);put(g3,0,650,116);let minY=999;for(let i=0;i<40;i++){run(g3,0.1);minY=Math.min(minY,P(g3,0).y)}ok(minY<=57&&!g3.S.deaths,'crusher lift rides up minY='+f(minY)+' '+g3.S.lastCause);}
 // The peak (24)
-{const g=G(24,2);const l=g.S.lifts[0];put(g,0,505,136);put(g,1,520,136);run(g,0.2);run(g,3);ok(l.y<=81,'peak lift up');
+{const g=G(24,2);const l=g.S.lifts[0];put(g,0,795,136);put(g,1,810,136);run(g,0.2);run(g,3);ok(l.y<=81,'peak lift up');
  const c=g.S.crush[0];let maxB=0;for(let i=0;i<40;i++){run(g,0.1);maxB=Math.max(maxB,c.y+c.h)}ok(Math.abs(maxB-80)<0.6,'peak crusher hits floor '+f(maxB));}
 console.log('pass',pass,'fail',fail);
