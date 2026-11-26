@@ -8,7 +8,7 @@ const THEMES = ['Snowpeak', 'Autumn Woods', 'Crystal Caves', 'Sky Ruins', 'Ember
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => v < t ? Math.min(t, v + d) : Math.max(t, v - d);
 const ov = (a, b) => a.x < b.x + b.w - 1e-6 && a.x + a.w > b.x + 1e-6 && a.y < b.y + b.h - 1e-6 && a.y + a.h > b.y + 1e-6;
-const MAXP = 8;
+const MAXP = 8, SEQ_GAP = 1.25; // numbered switches: seconds allowed between presses
 const SH = n => n >= 3 ? 5 : 4; // wall height that needs everyone stacked: 2 players reach 4 tiles, 3 players reach 5
 
 // ---------- level builder ----------
@@ -16,7 +16,7 @@ function B(w, rows) {
   rows = rows || ROWS;
   const g = []; for (let y = 0; y < rows; y++) g.push(new Array(w).fill('.'));
   const L = { w, rows, g, ents: [], hints: [], flags: {} };
-  L.f = (x0, y0, x1, y1, ch) => { ch = ch || '#'; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (y >= 0 && y < rows && x >= 0 && x < w) g[y][x] = ch; return L; };
+  L.f = (x0, y0, x1, y1, ch) => { ch = ch || '#'; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (y >= 0 && y < rows && x >= 0 && x < L.w) g[y][x] = ch; return L; };
   L.gr = (x0, x1, top) => L.f(x0, top, x1, rows - 1, '#');
   L.pit = (x0, x1, floor, depth) => { L.f(x0, floor, x1, floor + depth - 1, '.'); L.f(x0, floor + depth - 1, x1, floor + depth - 1, '^'); return L; };
   L.spk = (x0, x1, row) => L.f(x0, row, x1, row, '^');
@@ -40,6 +40,39 @@ function roomGate(L, x, F, sig) {
   L.h(x + 5, F - 8, 'Hold the gate for each other', 'x:' + (x + 11));
   return x + 12;
 }
+// Douse the fire: a fire wall you can't jump. The button that puts it out is on a ledge you need a boost to reach;
+// a second button past the fire lets the team bring the ledge-holder across.
+function roomFire(L, x, F, s, sig) {
+  s = Math.min(s, F - 2);
+  (L.rooms = L.rooms || []).push({ t: 'fire', x, F, sig, s });
+  L.f(x + 1, F - s, x + 4, F - s);
+  L.e({ t: 'plate', x: x + 2, floor: F - s, sig });
+  L.f(x + 8, 0, x + 8, F - 7).e({ t: 'fire', x: x + 8, floor: F, h: Math.min(6, F), sig });
+  L.e({ t: 'plate', x: x + 11, floor: F, sig });
+  L.h(x + 5, F - s - 3, 'The fire goes out while someone holds the button', 'x:' + (x + 14));
+  return x + 14;
+}
+// Numbered switches (one per player, up to 4), far apart: press them in order, each within a second or so of the last.
+// Nobody can run between them in time, so everyone takes a switch and you count it out.
+function roomOrder(L, x, F, n, sig) {
+  const k = Math.min(Math.max(n, 2), 4), gap = 14;
+  (L.rooms = L.rooms || []).push({ t: 'order', x, F, sig, k, gap });
+  for (let i = 0; i < k; i++) L.e({ t: 'plate', x: x + 1 + i * gap, floor: F, sig, seq: i + 1 });
+  const gx = x + 4 + (k - 1) * gap;
+  L.f(gx, 0, gx, F - 7).f(gx, Math.max(0, F - 6), gx, F - 1, sig.toUpperCase());
+  L.h(x + 1 + (k - 1) * gap / 2, F - 6, 'Press 1' + (k > 2 ? ', 2, 3' : ', 2') + (k > 3 ? ', 4' : '') + ' in order. Too far apart to run!', sig);
+  return gx + 2;
+}
+// Keep moving: a bridge over spikes that only holds while someone runs on a treadmill. A second treadmill on the
+// far side lets the last runner across.
+function roomRun(L, x, F, sig) {
+  (L.rooms = L.rooms || []).push({ t: 'run', x, F, sig });
+  L.e({ t: 'plate', x: x + 1, floor: F, sig, run: -1 });
+  L.f(x + 6, F, x + 11, F + 1, '.').f(x + 6, F + 1, x + 11, F + 1, '^').f(x + 6, F, x + 11, F, sig);
+  L.e({ t: 'plate', x: x + 13, floor: F, sig, run: -1 });
+  L.h(x + 8, F - 5, 'The bridge only holds while someone runs left on a treadmill', 'x:' + (x + 17));
+  return x + 17;
+}
 // Crate bridge: a gap too wide to jump; everyone pushes the big crate in to fill it.
 function roomCrate(L, x, F) {
   (L.rooms = L.rooms || []).push({ t: 'crate', x, F });
@@ -59,6 +92,21 @@ function roomButtons(L, x, F, n, s, sig) {
   L.f(gx, 0, gx, F - 7).f(gx, Math.max(0, F - 6), gx, F - 1, sig.toUpperCase());
   L.h(x + 5 + (n - 1) * 1.5, F - s - 4, n + ' buttons at once. One needs a boost', sig);
   return gx + 2;
+}
+
+// Add teamwork rooms before a level's exit: the level gets wider, the ground at the door's height carries on, and the door moves to the end.
+function extendEnd(L, n, rooms) {
+  const d = L.ents.find(e => e.t === 'door'), F = d.floor, x0 = d.x, s = SH(n);
+  let w = 0; for (const r of rooms) w += { gate: 12, crate: 20, buttons: 12 + (n - 1) * 3, fire: 15, order: 7 + (Math.min(Math.max(n, 2), 4) - 1) * 14, run: 18 }[r[0]];
+  const add = w + 10, W0 = L.w;
+  for (let y = 0; y < L.rows; y++) for (let k = 0; k < add; k++) L.g[y].push('.');
+  L.w = W0 + add;
+  for (let x = x0; x < L.w; x++) for (let y = 0; y < L.rows; y++) L.g[y][x] = y < F ? '.' : '#';
+  let x = x0 + 1;
+  for (const [t, sig] of rooms) x = t === 'gate' ? roomGate(L, x, F, sig) + 1 : t === 'crate' ? roomCrate(L, x, F) + 1 : t === 'buttons' ? roomButtons(L, x, F, n, s, sig) + 1 : t === 'order' ? roomOrder(L, x, F, n, sig) + 1 : t === 'run' ? roomRun(L, x, F, sig) + 1 : roomFire(L, x, F, s, sig) + 1;
+  d.x = x + 3;
+  L.hints = L.hints.filter(h => h.hide !== 'win' || h.x < x0 - 2);
+  return L;
 }
 
 const LEVELS = [
@@ -150,12 +198,12 @@ const LEVELS = [
     .e({ t: 'door', x: 104, floor: 15 });
    return L.h(9, 8, 'Touch torches to light them', 'x:22').h(44, 7, stackHint(s), 'a'); } },
  { name: 'Spread out', goal: 'Buttons all over the cavern, pressed at the same time', build(n) {
-   const s = SH(n), L = B(64, 34);
+   const s = SH(n), L = B(64, 34); L.flags.dark = true;
    L.gr(0, 63, 32).f(22, 32, 24, 33, '.').f(40, 32, 52, 33, '.').spk(40, 52, 33)
     .f(13, 29, 17, 29, '-').f(8, 26, 12, 26, '-').f(13, 23, 17, 23, '-').f(1, 23 - s, 11, 23 - s)
     .f(25, 10, 36, 10).f(27, 26, 34, 26).f(27, 27, 27, 31, 'A').f(34, 27, 34, 31, 'A')
     .f(60, 31, 60, 31, 'o').f(50, 23, 57, 23).f(44, 23 - s, 49, 23 - s);
-   S0(L, 3, 32);
+   S0(L, 3, 32); [[6, 32], [5, 23 - s], [16, 29], [33, 10], [38, 32], [47, 23 - s], [53, 23], [61, 32]].forEach(([x, f]) => L.e({ t: 'torch', x, floor: f }));
    const plates = [{ x: 3, floor: 23 - s }, { x: 56, floor: 32 }];
    if (n >= 3) plates.splice(1, 0, { x: 30, floor: 10 });
    if (n >= 4) plates.push({ x: 17, floor: 32 });
@@ -263,6 +311,12 @@ const LEVELS = [
     .h(87 + o, 1.6, 'Time the crushers', 'x:' + (100 + o)).h(112 + o, 5, 'Drop on, then all push the same way', 'x:' + (137 + o)).h(end + 8, 15 - s - 3, 'Stack for the key', 'key'); } },
 ];
 LEVELS.forEach((L, i) => { L.theme = Math.floor(i / 5); });
+// Extra teamwork rooms added before each level's exit (rope levels get crates: a short rope can't stretch across a held gate).
+const MORE = {
+  0: () => [['fire', 'c']], 1: () => [['fire', 'c'], ['order', 'd']], 2: () => [['crate'], ['fire', 'd']], 3: () => [['fire', 'b']], 4: () => [['run', 'c'], ['fire', 'd']],
+  5: () => [['crate']], 6: () => [['fire', 'a'], ['crate']], 7: () => [['fire', 'c']], 8: () => [['fire', 'c']], 9: () => [['fire', 'a'], ['run', 'b']],
+  10: () => [['crate']], 11: () => [['order', 'd'], ['fire', 'c']], 13: () => [['order', 'a'], ['fire', 'b']], 14: () => [['crate']], 15: () => [['fire', 'b']],
+  16: () => [['fire', 'd']], 18: () => [['fire', 'c'], ['run', 'd']], 20: () => [['fire', 'a'], ['order', 'b']], 21: () => [['fire', 'c']], 22: () => [['fire', 'c']], 24: () => [['fire', 'd']] };
 
 // ---------- game ----------
 function createGame(li, n) {
@@ -272,14 +326,14 @@ function createGame(li, n) {
   return g;
 }
 function compile(g, n) {
-  const def = LEVELS[g.li], L = def.build(n);
+  const def = LEVELS[g.li], L = def.build(n); if (MORE[g.li]) extendEnd(L, n, MORE[g.li](n));
   Object.assign(g, { n, name: def.name, goal: def.goal, theme: def.theme, W: L.w, H: L.rows, LW: L.w * TS, LH: L.rows * TS, grid: L.g, hints: L.hints, flags: L.flags, rooms: L.rooms || [] });
   g.zMin = g.flags.scroll ? 1 : Math.max(0.5, VW / g.LW);
   g.spawn = L.ents.find(e => e.t === 'spawn');
   const kd = L.ents.find(e => e.t === 'key'); g.keyHome = { x: kd.x * TS + 5, y: kd.floor * TS - 9 };
   const dd = L.ents.find(e => e.t === 'door'); g.door = { x: dd.x * TS, y: dd.floor * TS - 22, w: 20, h: 22 };
   const E = t => L.ents.filter(e => e.t === t);
-  g.plateDefs = E('plate').map(e => ({ x: e.x * TS, y: e.floor * TS, w: 20, sig: e.sig, color: e.color == null ? -1 : e.color, timer: e.timer || 0, and: !!e.and }));
+  g.plateDefs = E('plate').map(e => ({ x: e.x * TS, y: e.floor * TS, w: 20, sig: e.sig, color: e.color == null ? -1 : e.color, timer: e.timer || 0, and: !!e.and, seq: e.seq || 0, run: e.run || 0 }));
   g.leverDefs = E('lever').map(e => ({ x: e.x * TS + 1, y: e.floor * TS - 10, w: 8, h: 10, sig: e.sig }));
   g.crateDefs = E('crate').map(e => ({ x: e.x * TS, y: e.floor * TS - e.h * TS, w: e.w * TS, h: e.h * TS, need: e.need, wt: e.wt || 2 }));
   g.liftDefs = E('lift').map(e => ({ x: e.x * TS, y: e.y * TS, x2: e.x2 * TS, y2: e.y2 * TS, w: e.w * TS, need: e.need, spd: e.spd, exact: !!e.exact }));
@@ -291,6 +345,7 @@ function compile(g, n) {
   g.fanDefs = E('fan').map(e => ({ x: e.x * TS, y: e.floor * TS, w: (e.w || 2) * TS, h: e.h * TS, sig: e.sig || null }));
   g.crushDefs = E('crush').map(e => ({ x: e.x * TS, y: e.y * TS, w: e.w * TS, h: e.h * TS, drop: e.drop * TS, period: e.period, off: e.off || 0, sig: e.sig || null }));
   g.torchDefs = E('torch').map(e => ({ x: e.x * TS + 5, y: e.floor * TS }));
+  g.fireDefs = E('fire').map(e => ({ x: e.x * TS, y: (e.floor - e.h) * TS, w: (e.w || 1) * TS, h: e.h * TS, sig: e.sig || null, period: e.period || 0, on: e.on || 0.5, off: e.off || 0 }));
   const letters = new Set();
   g.sigTiles = {}; g.crumbTiles = []; g.flipTiles = [];
   for (let y = 0; y < L.rows; y++) for (let x = 0; x < L.w; x++) {
@@ -300,7 +355,7 @@ function compile(g, n) {
     if (c === '[' || c === ']') g.flipTiles.push(y * L.w + x);
   }
   g.plateDefs.forEach(p => letters.add(p.sig)); g.leverDefs.forEach(p => letters.add(p.sig));
-  g.fanDefs.forEach(f => f.sig && letters.add(f.sig)); g.crushDefs.forEach(c => c.sig && letters.add(c.sig));
+  g.fanDefs.forEach(f => f.sig && letters.add(f.sig)); g.fireDefs.forEach(f => f.sig && letters.add(f.sig)); g.crushDefs.forEach(c => c.sig && letters.add(c.sig));
   if (g.flags.doorSig) letters.add(g.flags.doorSig);
   g.letters = [...letters];
 }
@@ -317,7 +372,7 @@ function reset(g, keep) {
   const S = g.S = { t: keep ? o.t : 0, deaths: keep ? o.deaths : 0, dc: keep && o.dc ? o.dc : {}, restartT: 0, culprit: -1, cause: '', lastCause: keep ? o.lastCause : '', won: false, winT: 0,
     cam: 0, camY: 0, zoom: 1, wl: -1e5, wr: 1e5, scroll: 0,
     sig: {}, plates: g.plateDefs.map(() => 0), levers: g.leverDefs.map(() => 0), crates: [], lifts: [], bals: [], bridges: [], crumb: {}, rafts: [], crush: [],
-    torches: g.torchDefs.map(() => 0), flip: 0, flipCd: 0, ghost: {}, light: { ph: 0, t: 0 }, key: { x: g.keyHome.x, y: g.keyHome.y, carrier: -1, used: false }, door: { open: false, t: 0 } };
+    torches: g.torchDefs.map(() => 0), seq: {}, flip: 0, flipCd: 0, ghost: {}, light: { ph: 0, t: 0 }, key: { x: g.keyHome.x, y: g.keyHome.y, carrier: -1, used: false }, door: { open: false, t: 0 } };
   for (const l of g.letters) S.sig[l] = { on: false, latched: false, tmr: 0, gate: true, open: 0, show: 0 };
   g.crateDefs.forEach(d => S.crates.push({ x: d.x, y: d.y, w: d.w, h: d.h, vx: 0, vy: 0, dx: 0, pushN: 0, needN: 1, isCrate: true }));
   g.liftDefs.forEach(d => S.lifts.push({ x: d.x, y: d.y, w: d.w, h: 6, u: 0, dir: 1, pause: 0, hold: 0, dx: 0, dy: 0, r: 0, needN: 0, isLift: true }));
@@ -476,30 +531,35 @@ function step(g, dt) {
   for (const k in S.ghost) { const tx = k % g.W, ty = Math.floor(k / g.W), r = { x: tx * TS, y: ty * TS, w: TS, h: TS }; if (!g.players.some(p => alive(p) && ov(p, r)) && !S.crates.some(c => ov(c, r))) delete S.ghost[k]; }
   g.torchDefs.forEach((t, i) => { if (!S.torches[i] && act.some(p => Math.abs(p.x + 5 - t.x) < 10 && p.y + p.h > t.y - 24 && p.y < t.y)) { S.torches[i] = 1; fx(g, 'torch', t.x, t.y - 16); } });
   updKeyDoor(g, dt);
+  for (let i = 0; i < g.fireDefs.length; i++) if (fireLit(g, i)) { const f = g.fireDefs[i], r = { x: f.x + 1, y: f.y + 2, w: f.w - 2, h: f.h - 2 }; for (const p of g.players) if (alive(p) && ov(p, r)) kill(g, p, 'fire'); }
   for (const sd of g.sawDefs) { const s = sawPos(g, sd); for (const p of g.players) if (alive(p)) { const cx = clamp(s.x, p.x, p.x + p.w), cy = clamp(s.y, p.y, p.y + p.h); if ((cx - s.x) ** 2 + (cy - s.y) ** 2 < 30) kill(g, p, 'saw'); } }
   if (S.won) S.winT += dt;
 }
 function sawPos(g, sd) { const u = (1 - Math.cos(g.S.t * sd.spd)) / 2; return { x: sd.x + (sd.x2 - sd.x) * u, y: sd.y + (sd.y2 - sd.y) * u }; }
 function crushTiming(d) { const dropT = d.drop / 320, waitB = 0.6, riseT = d.drop / 45, waitT = Math.max(0.3, d.period - dropT - waitB - riseT); return { dropT, waitB, riseT, waitT, total: waitT + dropT + waitB + riseT }; }
+function fireLit(g, i) { const f = g.fireDefs[i], S = g.S; if (f.sig) return !S.sig[f.sig].on; if (!f.period) return true; const ph = (((S.t + f.off) % f.period) + f.period) % f.period; return ph < f.period * f.on; }
+function fireWarn(g, i) { const f = g.fireDefs[i]; if (f.sig || !f.period) return false; const ph = (((g.S.t + f.off) % f.period) + f.period) % f.period; return ph > f.period - 0.5; }
 function crushNext(g, i, dt) { const S = g.S, c = S.crush[i], d = g.crushDefs[i], T = crushTiming(d); if (d.sig && S.sig[d.sig].on) return Math.max(d.y, c.y - 45 * dt);
   c.ct += dt; const { ph } = crushPhase(g, i); let u; if (ph < T.waitT) u = 0; else if (ph < T.waitT + T.dropT) u = (ph - T.waitT) / T.dropT; else if (ph < T.waitT + T.dropT + T.waitB) u = 1; else u = 1 - (ph - T.waitT - T.dropT - T.waitB) / T.riseT; return d.y + u * d.drop; }
 function crushPhase(g, i) { const d = g.crushDefs[i], c = g.S.crush[i], T = crushTiming(d); const ph = ((c.ct + d.off) % T.total + T.total) % T.total; return { ph, T, warn: ph > T.waitT - 0.45 && ph < T.waitT }; }
 
 function pressing(g, pl) {
-  const ents = [...g.players.filter(alive)];
-  if (pl.color < 0) ents.push(...g.S.crates);
+  const ents = g.players.filter(p => alive(p) && (!pl.run || p.input.x === pl.run));
+  if (pl.color < 0 && !pl.run) ents.push(...g.S.crates);
   return ents.some(e => (pl.color < 0 || e.slot === pl.color) && Math.abs(e.y + e.h - pl.y) < 1.5 && e.x < pl.x + pl.w && e.x + e.w > pl.x);
 }
 function updSignals(g, dt) {
   const S = g.S, live = g.players.filter(alive);
   const hold = {}, andAll = {}, andAny = {};
   g.plateDefs.forEach((pl, i) => {
-    const on = pressing(g, pl); if (on && !S.plates[i]) fx(g, 'plate', pl.x + 10, pl.y, 1); if (!on && S.plates[i]) fx(g, 'plate', pl.x + 10, pl.y, 0);
+    const on = pressing(g, pl), was = S.plates[i]; if (on && !S.plates[i]) fx(g, 'plate', pl.x + 10, pl.y, 1); if (!on && S.plates[i]) fx(g, 'plate', pl.x + 10, pl.y, 0);
     S.plates[i] = on ? 1 : 0; const sg = S.sig[pl.sig];
-    if (pl.and) { andAny[pl.sig] = true; andAll[pl.sig] = (andAll[pl.sig] !== false) && on; }
+    if (pl.seq) { const q = S.seq[pl.sig] || (S.seq[pl.sig] = { next: 1, t: 0 }); if (on && !was && !sg.latched) { if (pl.seq === q.next) { q.next++; q.t = SEQ_GAP; fx(g, 'seq', pl.x + 10, pl.y, pl.seq); if (q.next > g.plateDefs.filter(p => p.sig === pl.sig).length) { sg.latched = true; fx(g, 'latch', S.cam + VW / 2, 60); } } else if (pl.seq !== q.next - 1) { q.next = 1; q.t = 0; fx(g, 'seqbad', pl.x + 10, pl.y, 0); } } }
+    else if (pl.and) { andAny[pl.sig] = true; andAll[pl.sig] = (andAll[pl.sig] !== false) && on; }
     else if (pl.timer) { if (on) sg.tmr = pl.timer; }
     else if (on) hold[pl.sig] = true;
   });
+  for (const l in S.seq) { const q = S.seq[l]; if (q.t > 0) { q.t -= dt; if (q.t <= 0 && !S.sig[l].latched) { q.next = 1; fx(g, 'seqbad', 0, 0, 1); } } }
   for (const l in andAny) if (andAll[l] && !S.sig[l].latched) { S.sig[l].latched = true; fx(g, 'latch', S.cam + VW / 2, 60); }
   g.leverDefs.forEach((lv, i) => { if (!S.levers[i] && live.some(p => ov(p, lv))) { S.levers[i] = 1; S.sig[lv.sig].latched = true; fx(g, 'lever', lv.x + 4, lv.y); } });
   for (const l of g.letters) {
@@ -634,7 +694,9 @@ function updPlayer(g, p, dt) {
     const top = f.y - f.h;
     if (p.x + p.w > f.x + 1 && p.x < f.x + f.w - 1 && p.y + p.h > top && p.y < f.y) { const str = 1500 * clamp((p.y + p.h - top) / 40, 0, 1); p.vy = Math.max(-150, p.vy - str * dt); p.cut = true; }
   }
-  const hx = move(g, p, p.vx * dt, 'x'); if (hx && !hx.isCrate && !hx.isPlayer) p.vx = 0;
+  const xb = p.x, hx = move(g, p, p.vx * dt, 'x'); if (hx && !hx.isCrate && !hx.isPlayer) p.vx = 0;
+  // treadmills: running the right way keeps you in place (and powers the bridge)
+  if (p.grounded && inp.x) for (const pl of g.plateDefs) if (pl.run === inp.x && p.x + p.w > pl.x + 1 && p.x < pl.x + pl.w - 1 && Math.abs(p.y + p.h - pl.y) < 1.5) { move(g, p, xb - p.x, 'x'); p.anim += dt * 2; break; }
   const rb = raftOf(p);
   if (rb) { const d = g.raftDefs[S.rafts.indexOf(rb)], lo = Math.min(d.x, d.x2), hi = Math.max(d.x, d.x2);
     if (rb.x > lo + 0.5 && p.x < rb.x) { move(g, p, rb.x - p.x, 'x'); p.vx = Math.max(0, p.vx); }
@@ -739,6 +801,6 @@ function setInput(g, slot, x, jump, down, q) {
 }
 function clearEdges(g) { for (const p of g.players) { p.input.jumpP = false; p.input.downP = false; } }
 
-const api = { packSnap, unpackSnap, supportOf, MAXP, TS, VW, VH, ROWS, STEP, PW, PH, LEVELS, THEMES, createGame, compile, adapt, reset, step, camera, addPlayer, removePlayer, place, snapshot, serialize, applySnapshot, setInput, clearEdges, sawPos, crushPhase, tileRect, ov, needOf, predictStep, SH };
+const api = { fireLit, fireWarn, packSnap, unpackSnap, supportOf, MAXP, TS, VW, VH, ROWS, STEP, PW, PH, LEVELS, THEMES, createGame, compile, adapt, reset, step, camera, addPlayer, removePlayer, place, snapshot, serialize, applySnapshot, setInput, clearEdges, sawPos, crushPhase, tileRect, ov, needOf, predictStep, SH };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HP = api;
 })(typeof window !== 'undefined' ? window : globalThis);

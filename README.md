@@ -26,6 +26,19 @@ Every level is rebuilt for the number of players (2 to 8). If someone joins or l
 
 The camera follows everyone and zooms out as the team spreads, including on the tall levels (Spread out, The climb).
 
+## Puzzle rooms
+
+Most levels end with one or two teamwork rooms before the exit:
+
+- **Held gate:** a button on each side; someone holds it so the others can cross, then gets let through.
+- **Crate bridge:** a gap too wide to jump; everyone pushes the big crate in to fill it.
+- **Everyone's buttons:** one per player, all at once; one is on a pillar that needs a boost.
+- **Douse the fire:** a fire wall you can't jump; someone is boosted onto a ledge to hold the button that puts it out, and a button past the fire brings them across.
+- **Numbered switches:** press 1, 2, 3, 4 in order with barely a second between presses. They're too far apart to run, so everyone takes one and you count it out.
+- **Keep moving:** a bridge over spikes that only holds while someone runs left on a treadmill; a second treadmill on the far side brings the runner over.
+
+Spread out is now a dark cavern lit by torches.
+
 ## Online lag
 
 Your own climber is predicted on your machine, so it responds instantly. The server's answer corrects it smoothly, and other players are shown about 70 ms in the past so they move smoothly. To test with fake lag, run `LAG_MS=60 node server.js`, which adds 60 ms each way.

@@ -17,7 +17,7 @@ for(let n=5;n<=8;n++)for(let i=0;i<25;i++){const g=G(i,n);ok(g.n===n&&g.players.
 // Hold the door at 8: eight AND buttons that all fit before the stairs
 {const g=G(2,8),pl=g.plateDefs.filter(p=>p.and);ok(pl.length===8&&Math.max(...pl.map(p=>p.x))+20<=820,'HD 8 buttons fit');pl.forEach((p,i)=>put(g,i,p.x+5,136));run(g,0.3);ok(g.S.sig.c.latched,'HD all 8 latch');}
 // Colour code at 8: purple/green/blue/white each have a button only they can press; gate E opens when all four stand on theirs
-{const g=G(10,8),cp=g.plateDefs.filter(p=>p.sig==='e');ok(cp.length===4&&cp.every((p,i)=>p.color===4+i&&p.and),'CC n8 four colour buttons');ok(g.grid[12][98]==='E'&&g.door.x===1040,'CC n8 gate E and door moved');
+{const g=G(10,8),cp=g.plateDefs.filter(p=>p.sig==='e');ok(cp.length===4&&cp.every((p,i)=>p.color===4+i&&p.and),'CC n8 four colour buttons');ok(g.grid[12][98]==='E'&&g.door.x>=1040,'CC n8 gate E and door moved');
  g.S.sig.a.latched=g.S.sig.b.latched=g.S.sig.c.latched=g.S.sig.d.latched=true;run(g,0.6);put(g,0,cp[0].x+5,136);put(g,1,cp[1].x+5,136);put(g,2,cp[2].x+5,136);put(g,3,cp[3].x+5,136);run(g,0.3);ok(!g.S.sig.e.latched,'CC wrong colours do nothing');
  for(let k=0;k<4;k++){put(g,k,200+k*12,136);put(g,4+k,cp[k].x+5,136)}run(g,0.3);ok(g.S.sig.e.latched,'CC 5-8 on their colours open gate E');}
 // stacked friends count as lift riders: All aboard at 8 needs 5 on the lift and 3 on their heads
