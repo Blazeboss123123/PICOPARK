@@ -470,9 +470,8 @@ function nonRiderBlock(g, plat, nx, ny) {
   return false;
 }
 function aboardRaft(g, r) { return g.players.filter(p => alive(p) && p.x + p.w > r.x + 1 && p.x < r.x + r.w - 1 && p.y + p.h <= r.y + 0.6 && p.y + p.h >= r.y - 80); }
-function updMovers(g, dt) {
-  const S = g.S;
-  S.lifts.forEach((l, i) => {
+function updLifts(g, dt) {
+  g.S.lifts.forEach((l, i) => { const S = g.S;
     const d = g.liftDefs[i], dist = Math.hypot(d.x2 - d.x, d.y2 - d.y) || 1, need = d.need === 0 ? 0 : needOf(g, d.need);
     l.r = ridersOf(g, l) + S.crates.filter((c, ci) => g.crateOn[ci] === l).length; l.needN = need;
     const u0 = l.u;
@@ -482,6 +481,10 @@ function updMovers(g, dt) {
     if (nonRiderBlock(g, l, nx, ny)) { l.u = u0; l.dx = l.dy = 0; return; }
     l.dx = nx - l.x; l.dy = ny - l.y; l.x = nx; l.y = ny;
   });
+}
+function updMovers(g, dt) {
+  const S = g.S;
+  updLifts(g, dt);
   S.rafts.forEach((r, i) => {
     const d = g.raftDefs[i], ab = aboardRaft(g, r), all = g.players.filter(alive).length; r.n = ab.length;
     let dir = 0; if (ab.length && ab.length === all) { const d0 = ab[0].input.x; if (d0 && ab.every(p => p.input.x === d0)) dir = d0; }
@@ -632,10 +635,11 @@ function updKeyDoor(g, dt) {
 
 // ---------- client-side prediction of one player (online play) ----------
 // world: a game object whose S and other players come from the latest server snapshot.
+function supportOf(g, p) { if (!alive(p)) return null; const gr = groundOf(g, p); return gr.find(PLAT) || null; }
 function predictStep(world, p, dt) {
   const S = world.S;
-  for (const l of S.lifts) { l.x += l.dx; l.y += l.dy; }
-  for (const r of S.rafts) r.x += r.dx;
+  updLifts(world, dt);
+  S.rafts.forEach((r, i) => { const d = world.raftDefs[i]; r.x = clamp(r.x + r.dx, Math.min(d.x, d.x2), Math.max(d.x, d.x2)); });
   for (const c of S.crush) c.y += c.dy;
   for (const b of S.bals) for (const pn of b.pans) pn.y += pn.dy;
   S.t += dt; if (S.flipCd > 0) S.flipCd -= dt;
@@ -668,6 +672,6 @@ function setInput(g, slot, x, jump, down, q) {
 }
 function clearEdges(g) { for (const p of g.players) { p.input.jumpP = false; p.input.downP = false; } }
 
-const api = { MAXP, TS, VW, VH, ROWS, STEP, PW, PH, LEVELS, THEMES, createGame, compile, adapt, reset, step, camera, addPlayer, removePlayer, place, snapshot, serialize, applySnapshot, setInput, clearEdges, sawPos, crushPhase, tileRect, ov, needOf, predictStep, SH };
+const api = { supportOf, MAXP, TS, VW, VH, ROWS, STEP, PW, PH, LEVELS, THEMES, createGame, compile, adapt, reset, step, camera, addPlayer, removePlayer, place, snapshot, serialize, applySnapshot, setInput, clearEdges, sawPos, crushPhase, tileRect, ov, needOf, predictStep, SH };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HP = api;
 })(typeof window !== 'undefined' ? window : globalThis);

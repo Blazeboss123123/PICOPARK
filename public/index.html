@@ -367,7 +367,8 @@ function simEntry(W,me,e){me.input.x=e.x;me.input.jump=e.j;me.input.jumpP=e.jp;m
 function reconcile(d){const sp=d.P.find(p=>p.slot===net.slot);if(!sp||sp.dead||sp.ins||d.S.restartT>0||d.S.won||!game){pr.p=null;pr.world=null;pr.log.length=0;return}
  const rest=pr.log.filter(e=>e.q>sp.q||(e.q===sp.q&&e.k>=sp.m));pr.log=rest;
  const W=Object.create(game);W.S=structuredClone(d.S);W.fx=[];W.noWalls=false;W.crateOn=W.S.crates.map(()=>null);
- W.players=d.P.filter(q=>!q.dead&&!q.ins).map(q=>({slot:q.slot,x:q.x,y:q.y,w:H.PW,h:H.PH,vx:q.vx,vy:q.vy,face:q.face,grounded:q.gr,coyote:q.co,buffer:q.bu,cut:q.cut,squash:q.sq,anim:q.an,row:q.row||0,blinkT:q.bl,dead:0,inside:false,on:null,isPlayer:true,input:{x:0,jump:false,jumpP:false,downP:false}}));
+ W.players=d.P.map(q=>({slot:q.slot,x:q.x,y:q.y,w:H.PW,h:H.PH,vx:q.vx,vy:q.vy,face:q.face,grounded:q.gr,coyote:q.co,buffer:q.bu,cut:q.cut,squash:q.sq,anim:q.an,row:q.row||0,blinkT:q.bl,dead:q.dead?1:0,inside:!!q.ins,on:null,isPlayer:true,input:{x:0,jump:false,jumpP:false,downP:false}}));
+ W.players.sort((a,b)=>b.y-a.y).forEach(p=>{if(p.grounded)p.on=H.supportOf(W,p)});
  const me=W.players.find(p=>p.slot===net.slot);const old=pr.p?{x:pr.p.x+pr.off.x,y:pr.p.y+pr.off.y}:null;
  for(const e of rest)simEntry(W,me,e);
  if(me.dead){pr.p=null;pr.world=null;return}
@@ -398,6 +399,9 @@ function showLobby(){setKeys(true);screen='lobby';const L=H.LEVELS[net.level];co
   +(net.host?'<h3>Pick a level</h3>':'')+levelGrid(net.level,net.done,net.host));
  if(net.host){p.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>send({t:'pick',level:+b.dataset.lv}));p.querySelector('#bStart').onclick=()=>send({t:'start',level:net.level})}
  p.querySelector('#bLeave').onclick=leaveRoom}
+let camC=null;
+function clientCam(g,dt){const S=g.S,key=g.li+'-'+g.n;if(!camC||camC.key!==key||S.restartT>0){camC={key,cam:S.cam,camY:S.camY||0,zoom:S.zoom||1,snap:true}}
+ S.cam=camC.cam;S.camY=camC.camY;S.zoom=camC.zoom;const t=S.t;H.camera(g,Math.min(dt,0.05),camC.snap);S.t=t;camC.snap=false;camC.cam=S.cam;camC.camY=S.camY;camC.zoom=S.zoom}
 function interp(){const sn=net.snaps;if(!sn.length)return;const tgt=performance.now()-70;let a=sn[0],b=sn[sn.length-1];
  for(let i=0;i<sn.length-1;i++){if(sn[i].at<=tgt&&sn[i+1].at>=tgt){a=sn[i];b=sn[i+1];break}}
  if(tgt>=b.at)a=b;const al=a===b?1:clamp((tgt-a.at)/(b.at-a.at),0,1),L=(u,v)=>u+(v-u)*al;
@@ -406,7 +410,7 @@ function interp(){const sn=net.snaps;if(!sn.length)return;const tgt=performance.
  const lerpArr=(arrA,arrB,keys)=>arrB.map((o,i)=>{const p=arrA&&arrA[i];if(!p)return o;const c=Object.assign({},o);keys.forEach(k=>c[k]=L(p[k],o[k]));return c});
  S.crates=lerpArr(A.S.crates,Bd.S.crates,['x','y']);S.lifts=lerpArr(A.S.lifts,Bd.S.lifts,['x','y']);S.bridges=lerpArr(A.S.bridges,Bd.S.bridges,['y']);S.rafts=lerpArr(A.S.rafts,Bd.S.rafts,['x']);S.crush=lerpArr(A.S.crush,Bd.S.crush,['y']);
  S.bals=Bd.S.bals.map((bb,i)=>{const pa=A.S.bals[i];if(!pa)return bb;return Object.assign({},bb,{pans:bb.pans.map((pn,j)=>Object.assign({},pn,{y:L(pa.pans[j].y,pn.y)}))})});
- S.key=Object.assign({},Bd.S.key,{x:L(A.S.key.x,Bd.S.key.x),y:L(A.S.key.y,Bd.S.key.y)});game.S=S;
+ S.key=Object.assign({},Bd.S.key,{x:L(A.S.key.x,Bd.S.key.x),y:L(A.S.key.y,Bd.S.key.y)});S.scroll=L(A.S.scroll||0,Bd.S.scroll||0);game.S=S;
  for(const p of game.players){const pa=A.P.find(q=>q.slot===p.slot);if(pa&&Math.abs(pa.x-p.x)<40){p.x=L(pa.x,p.x);p.y=L(pa.y,p.y)}}
  if(pr.p){const me=game.players.find(p=>p.slot===net.slot);if(me&&!me.dead&&!me.inside)Object.assign(me,{x:pr.p.x+pr.off.x,y:pr.p.y+pr.off.y,vx:pr.p.vx,vy:pr.p.vy,face:pr.p.face,grounded:pr.p.grounded,squash:pr.p.squash,anim:pr.p.anim,row:pr.p.row})}}
 
@@ -431,7 +435,7 @@ function frame(now){const dt=Math.min(0.1,(now-last)/1000);last=now;TT+=dt;
  else if(mode==='online'&&game){g=game;const inp=screen==='pause'?{x:0,j:false,d:false}:onlineInput();
   if(!pr.last||inp.x!==pr.last.x||inp.j!==pr.last.j||inp.d!==pr.last.d){pr.q++;pr.k=0;if(inp.j&&!(pr.last&&pr.last.j))pr.jp=true;if(inp.d&&!(pr.last&&pr.last.d))pr.dp=true;pr.last=inp;send({t:'in',x:inp.x,j:inp.j,d:inp.d,q:pr.q})}
   pr.acc+=dt;let ns=0;while(pr.acc>=H.STEP&&ns<14){const e={q:pr.q,k:pr.k++,x:inp.x,j:inp.j,jp:pr.jp,d:inp.d,dp:pr.dp};pr.jp=pr.dp=false;pr.log.push(e);if(pr.log.length>720)pr.log.shift();if(pr.p&&pr.world)simEntry(pr.world,pr.p,e);pr.acc-=H.STEP;ns++}if(ns>=14)pr.acc=0;
-  const dec=Math.exp(-dt*10);pr.off.x*=dec;pr.off.y*=dec;interp()}
+  const dec=Math.exp(-dt*10);pr.off.x*=dec;pr.off.y*=dec;interp();clientCam(game,dt)}
  else{demoT+=dt;if(demoT>9){demoT=0;demoW=(demoW+1)%5;demo=H.createGame(demoW*5+(demoW===0?0:1))}g=demo;demo.S.t+=dt;demo.S.cam=(Math.sin(demoT*0.12-1.2)*0.5+0.5)*Math.min(demo.LW-VW,700)}
  const d0=performance.now();draw(g,dt);const dd=performance.now()-d0;drawEMA=drawEMA*0.95+dd*0.05;if(!LOWQ){slowN=drawEMA>13?slowN+1:0;if(slowN>120){LOWQ=true;console.info('Huddle Peak: using the low-cost renderer')}}hit.clear();requestAnimationFrame(frame)}
 showTitle();requestAnimationFrame(frame);
