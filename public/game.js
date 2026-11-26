@@ -673,9 +673,14 @@ function predictStep(world, p, dt) {
 }
 
 // ---------- networking helpers ----------
+const PKEYS = ['slot', 'x', 'y', 'vx', 'vy', 'face', 'gr', 'sq', 'an', 'dead', 'ins', 'row', 'q', 'm', 'co', 'bu', 'cut'];
 function snapshot(g) {
-  return { li: g.li, n: g.n, S: g.S, P: g.players.map(p => ({ slot: p.slot, x: p.x, y: p.y, vx: p.vx, vy: p.vy, face: p.face, gr: p.grounded, sq: p.squash, an: p.anim, dead: p.dead, ins: p.inside, bl: p.blinkT, row: p.row, q: p.q, m: p.m, co: p.coyote, bu: p.buffer, cut: p.cut })), fx: g.fx.splice(0) };
+  return { li: g.li, n: g.n, S: g.S, P: g.players.map(p => ({ slot: p.slot, x: p.x, y: p.y, vx: p.vx, vy: p.vy, face: p.face, gr: p.grounded, sq: p.squash, an: p.anim, dead: p.dead, ins: p.inside, row: p.row, q: p.q, m: p.m, co: p.coyote, bu: p.buffer, cut: p.cut })), fx: g.fx.splice(0) };
 }
+// Network form: players as short arrays (booleans as 0/1), and no camera bookkeeping. About 40% smaller.
+const SKIP = { camGY: 1, zl: 1, zHold: 1, lastCause: 1 };
+function packSnap(g) { const sn = snapshot(g); return JSON.stringify({ li: sn.li, n: sn.n, S: sn.S, P: sn.P.map(p => PKEYS.map(k => typeof p[k] === 'boolean' ? +p[k] : p[k])), fx: sn.fx }, (k, v) => SKIP[k] ? undefined : typeof v === 'number' ? Math.round(v * 100) / 100 : v); }
+function unpackSnap(d) { d.P = d.P.map(a => { const o = {}; PKEYS.forEach((k, i) => o[k] = (k === 'gr' || k === 'ins' || k === 'cut') ? !!a[i] : a[i]); o.bl = 3; return o; }); return d; }
 const round2 = (k, v) => typeof v === 'number' ? Math.round(v * 100) / 100 : v;
 function serialize(g) { return JSON.stringify(snapshot(g), round2); }
 function applySnapshot(g, snap) {
@@ -685,7 +690,7 @@ function applySnapshot(g, snap) {
   for (const q of snap.P) {
     let p = g.players.find(o => o.slot === q.slot);
     if (!p) { p = { slot: q.slot, w: PW, h: PH, isPlayer: true, input: { x: 0, jump: false, jumpP: false, downP: false } }; g.players.push(p); g.players.sort((a, b) => a.slot - b.slot); }
-    Object.assign(p, { x: q.x, y: q.y, vx: q.vx, vy: q.vy, face: q.face, grounded: q.gr, squash: q.sq, anim: q.an, dead: q.dead, inside: q.ins, blinkT: q.bl, row: q.row || 0, q: q.q, m: q.m, coyote: q.co, buffer: q.bu, cut: q.cut, on: null });
+    if (q.bl == null || p.blinkT == null) p.blinkT = p.blinkT == null ? 2 + Math.random() * 3 : p.blinkT; Object.assign(p, { x: q.x, y: q.y, vx: q.vx, vy: q.vy, face: q.face, grounded: q.gr, squash: q.sq, anim: q.an, dead: q.dead, inside: q.ins, row: q.row || 0, q: q.q, m: q.m, coyote: q.co, buffer: q.bu, cut: q.cut, on: null });
   }
 }
 function setInput(g, slot, x, jump, down, q) {
@@ -697,6 +702,6 @@ function setInput(g, slot, x, jump, down, q) {
 }
 function clearEdges(g) { for (const p of g.players) { p.input.jumpP = false; p.input.downP = false; } }
 
-const api = { supportOf, MAXP, TS, VW, VH, ROWS, STEP, PW, PH, LEVELS, THEMES, createGame, compile, adapt, reset, step, camera, addPlayer, removePlayer, place, snapshot, serialize, applySnapshot, setInput, clearEdges, sawPos, crushPhase, tileRect, ov, needOf, predictStep, SH };
+const api = { packSnap, unpackSnap, supportOf, MAXP, TS, VW, VH, ROWS, STEP, PW, PH, LEVELS, THEMES, createGame, compile, adapt, reset, step, camera, addPlayer, removePlayer, place, snapshot, serialize, applySnapshot, setInput, clearEdges, sawPos, crushPhase, tileRect, ov, needOf, predictStep, SH };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HP = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -57,7 +57,7 @@ kbd{font:inherit;font-size:11px;color:#e6e0ff;background:#1c1338;border:1px soli
 <span><i style="background:#2ec4b6"></i>P2 <kbd>←</kbd><kbd>→</kbd> <kbd>↑</kbd> jump <kbd>↓</kbd> door/pass</span>
 <span><i style="background:#e85a8a"></i>P3 <kbd>J</kbd><kbd>L</kbd> <kbd>I</kbd> jump <kbd>K</kbd></span>
 <span><i style="background:#f2c53a"></i>P4 Numpad <kbd>4</kbd><kbd>6</kbd> <kbd>8</kbd> jump <kbd>5</kbd></span>
-<span>Gamepad: stick, <kbd>A</kbd> jump, <kbd>B</kbd> door, <kbd>Y</kbd> taunt · <kbd>T</kbd> taunt (P1) · <kbd>Esc</kbd> menu · <kbd>F</kbd> fullscreen</span>
+<span>Gamepad: stick, <kbd>A</kbd> jump, <kbd>B</kbd> door, <kbd>Y</kbd> taunt · <kbd>T</kbd> taunt (P1) · <kbd>Esc</kbd> menu · <kbd>F</kbd> fullscreen · <kbd>G</kbd> fast graphics · <kbd>N</kbd> network info</span>
 </div>
 <script src="game.js"></script>
 <script src="art.js"></script>
@@ -73,7 +73,7 @@ let rs=7;const rnd=()=>(rs=(rs*16807)%2147483647)/2147483647;
 
 // ---------- art module and view ----------
 const ART=window.HPArt,{PB,pk,rgb,mixh,h1,h2,vn,fbm,vn2,bay,buildBG,buildWorld}=ART;
-let BW=640,BH=360,VWv=VW,VHv=VH,DPR=1,VZW=VW,VZH=VH,HDX=0,BGS=1,LOWQ=false,drawEMA=0,slowN=0;
+let BW=640,BH=360,VWv=VW,VHv=VH,DPR=1,VZW=VW,VZH=VH,HDX=0,BGS=1,LOWQ=(()=>{try{return localStorage.getItem('hp-fast')==='1'}catch(e){return false}})(),drawEMA=0,slowN=0;
 const bgC=mk(BW,BH),bgX=bgC.getContext('2d'),scene=mk(BW*2+8,BH*2+8),sceneX=scene.getContext('2d'),up=mk(8,8),upX=up.getContext('2d'),vig=mk(8,8);let x=sceneX;
 
 // ---------- characters ----------
@@ -292,7 +292,8 @@ function draw(g,dt){const S=g.S,z=S.zoom||1;
  sharp(bgC,0,0,sw*BGS,sh*BGS,HDX,0,dw,scr.height);sharp(scene,fx-CX,fy-CY,sw/z,sh/z,HDX,0,dw,scr.height);
  if(flash>0){sctx.globalAlpha=flash*0.6;sctx.fillStyle='#ffffff';sctx.fillRect(0,0,scr.width,scr.height);sctx.globalAlpha=1}
  if(!LOWQ)sctx.drawImage(vig,0,0);x=sceneX;
- if(g!==demo)hud(g)}
+ if(g!==demo)hud(g);if(showNet)netStats()}
+function netStats(){const now=performance.now();if(now-net.upsT>1000){net.ups=net.upsN*1000/(now-net.upsT||1);net.upsN=0;net.upsT=now}const L=['FPS '+Math.round(fpsEMA)+'  draw '+drawEMA.toFixed(1)+' ms  '+(LOWQ?'fast':'sharp')+' graphics'];if(mode==='online')L.push('Ping '+Math.round(net.rtt)+' ms  updates '+Math.round(net.ups)+'/s  '+(net.bytes/1024).toFixed(1)+' KB each','Smoothing delay '+Math.round(net.delay)+' ms  (arrival wobble '+Math.round(net.jit)+' ms)');const fs=Math.max(10,Math.round(scr.height/70));sctx.font=fs+'px monospace';const w=Math.max(...L.map(t=>sctx.measureText(t).width))+fs;sctx.fillStyle='rgba(0,0,0,.7)';sctx.fillRect(scr.width-w-8,scr.height-L.length*fs*1.4-16,w,L.length*fs*1.4+8);sctx.fillStyle='#b8ffb0';sctx.textAlign='left';sctx.textBaseline='top';L.forEach((t,i)=>sctx.fillText(t,scr.width-w-8+fs/2,scr.height-L.length*fs*1.4-12+i*fs*1.4))}
 
 // ---------- HUD ----------
 function txt(s,px,py,size,col,align,stroke){sctx.font=size+'px "Press Start 2P", monospace';sctx.textAlign=align||'center';sctx.textBaseline='middle';sctx.lineJoin='round';sctx.lineWidth=Math.max(3,size*0.45);sctx.strokeStyle=stroke||'#120a26';sctx.strokeText(s,px,py);sctx.fillStyle=col;sctx.fillText(s,px,py)}
@@ -338,7 +339,7 @@ const BLOCK=new Set(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space','Num
 const down=new Set(),hit=new Set(),gpPrev={};
 addEventListener('keydown',e=>{if(e.target&&e.target.tagName==='INPUT')return;if(BLOCK.has(e.code))e.preventDefault();if(!down.has(e.code))hit.add(e.code);down.add(e.code);audioInit();
  if(e.code==='Escape'&&(mode==='local'||mode==='online')&&screen!=='win'){screen==='pause'?closeUI():showPause()}
- if(e.code==='KeyR'&&mode==='local'&&game&&!screen)startLocal(game.li);if(e.code==='KeyF'&&!e.repeat)toggleFS();if(e.code==='KeyT'&&!e.repeat&&game&&!screen){if(mode==='local'){const s=localSchemes.indexOf(0);if(s>=0)taunt(s,nextTaunt(s))}else if(mode==='online'&&net.slot>=0)send({t:'emote',i:nextTaunt(net.slot)})}});
+ if(e.code==='KeyR'&&mode==='local'&&game&&!screen)startLocal(game.li);if(e.code==='KeyF'&&!e.repeat)toggleFS();if(e.code==='KeyG'&&!e.repeat)setLowQ(!LOWQ);if(e.code==='KeyN'&&!e.repeat)showNet=!showNet;if(e.code==='KeyT'&&!e.repeat&&game&&!screen){if(mode==='local'){const s=localSchemes.indexOf(0);if(s>=0)taunt(s,nextTaunt(s))}else if(mode==='online'&&net.slot>=0)send({t:'emote',i:nextTaunt(net.slot)})}});
 addEventListener('keyup',e=>down.delete(e.code));addEventListener('blur',()=>down.clear());
 scr.addEventListener('pointerdown',()=>{scr.focus();audioInit()});
 function pads(){try{return navigator.getGamepads?navigator.getGamepads():[]}catch(e){return[]}}
@@ -357,7 +358,7 @@ const WCOL=['#4a3a8a','#b8582a','#1a5a8a','#3a8ad8','#a8300e'];
 function closeUI(){ui.innerHTML='';screen='';document.body.classList.remove('menu');try{scr.focus({preventScroll:true})}catch(e){}}
 function panel(html){document.body.classList.add('menu');ui.innerHTML='<div class="panel">'+html+'</div>';return ui.firstChild}
 function levelGrid(sel,doneSet,clickable){let h='<div class="worlds">';for(let w=0;w<5;w++){h+='<div class="world"><h4 style="background:'+WCOL[w]+'">'+(w+1)+'. '+esc(H.THEMES[w])+'</h4><div class="levels">';for(let i=w*5;i<w*5+5;i++){const L=H.LEVELS[i];h+='<button class="lv'+(doneSet.has(i)?' done':'')+(sel===i?' sel':'')+'" data-lv="'+i+'"'+(clickable?'':' disabled')+'><b>'+(i+1)+(doneSet.has(i)?' ✓':'')+'</b><span>'+esc(L.name)+'</span></button>'}h+='</div></div>'}return h+'</div>'}
-function setKeys(online){document.getElementById('keys').innerHTML=online?'<span><kbd>A</kbd><kbd>D</kbd> or <kbd>←</kbd><kbd>→</kbd> move · <kbd>W</kbd> <kbd>↑</kbd> or <kbd>Space</kbd> jump · <kbd>S</kbd> or <kbd>↓</kbd> door / pass key · <kbd>T</kbd> taunt · <kbd>Esc</kbd> menu · <kbd>F</kbd> fullscreen</span><span>Gamepad: stick, <kbd>A</kbd> jump, <kbd>B</kbd> door, <kbd>Y</kbd> taunt</span>':KEYHTML}
+function setKeys(online){document.getElementById('keys').innerHTML=online?'<span><kbd>A</kbd><kbd>D</kbd> or <kbd>←</kbd><kbd>→</kbd> move · <kbd>W</kbd> <kbd>↑</kbd> or <kbd>Space</kbd> jump · <kbd>S</kbd> or <kbd>↓</kbd> door / pass key · <kbd>T</kbd> taunt · <kbd>Esc</kbd> menu · <kbd>F</kbd> fullscreen · <kbd>G</kbd> fast graphics · <kbd>N</kbd> network info</span><span>Gamepad: stick, <kbd>A</kbd> jump, <kbd>B</kbd> door, <kbd>Y</kbd> taunt</span>':KEYHTML}
 const KEYHTML=document.getElementById('keys').innerHTML;
 function showTitle(){setKeys(false);mode='title';screen='title';const p=panel('<h2>Huddle Peak</h2><p>25 co-op levels across 5 worlds. Stack, push, hold doors and carry each other to the top. Everyone has to make it.</p><div class="row"><button id="bLocal">Play on this computer</button>'+(ONLINE_OK?'<button class="teal" id="bOnline">Play online</button>':'')+'</div>'+(ONLINE_OK?'':'<p style="font-size:13px">Online play works in the server version of this game.</p>'));
  p.querySelector('#bLocal').onclick=showLevels;if(ONLINE_OK)p.querySelector('#bOnline').onclick=showOnline}
@@ -383,7 +384,7 @@ function showWin(){screen='win';const last=game.li>=H.LEVELS.length-1,nextW=!las
  }
 
 // ---------- online ----------
-const net={ws:null,code:'',slot:-1,host:false,players:[],state:'',level:0,done:new Set(),snaps:[],lastIn:''};
+const net={rtt:0,iv:33,jit:5,delay:70,lastAt:0,bytes:0,ups:0,upsN:0,upsT:0,ws:null,code:'',slot:-1,host:false,players:[],state:'',level:0,done:new Set(),snaps:[],lastIn:''};
 // Client-side prediction: your own climber moves instantly; the server's answer corrects it smoothly.
 const pr={p:null,world:null,log:[],q:0,k:0,last:null,jp:false,dp:false,acc:0,off:{x:0,y:0}};
 function simEntry(W,me,e){me.input.x=e.x;me.input.jump=e.j;me.input.jumpP=e.jp;me.input.down=e.d;me.input.downP=e.dp;H.predictStep(W,me,H.STEP)}
@@ -406,16 +407,17 @@ function showOnline(err){mode='online-menu';screen='online';let nm='';try{nm=loc
 function connect(first){if(net.ws){try{net.ws.close()}catch(e){}}
  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws')}catch(e){const el=document.getElementById('err');if(el)el.textContent='Could not reach the server';return}net.ws=ws;
  ws.onopen=()=>ws.send(JSON.stringify(first));
- ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data)}catch(e){return}onMsg(m)};
+ ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data)}catch(e){return}if(m.t==='s')net.bytes=net.bytes*0.9+ev.data.length*0.1;onMsg(m)};
  ws.onclose=()=>{if(net.ws===ws){net.ws=null;if(mode==='online'||screen==='lobby'){game=null;showOnline('Disconnected from the room')}}};
  ws.onerror=()=>{if(screen==='online'){const e=document.getElementById('err');if(e)e.textContent='Could not reach the server'}}}
 function leaveRoom(){clearDeaths();send({t:'leave'});if(net.ws)try{net.ws.close()}catch(e){}net.ws=null;game=null;showOnline()}
 function onMsg(m){
  if(m.t==='err'){if(screen==='online'){const e=document.getElementById('err');if(e)e.textContent=m.msg}return}
  if(m.t==='emote'){taunt(m.slot,m.i);return}
+ if(m.t==='pong'){const r=performance.now()-m.c;net.rtt=net.rtt?net.rtt*0.7+r*0.3:r;return}
  if(m.t==='room'){net.code=m.code;net.slot=m.you;net.host=m.host===m.you;net.players=m.players;net.state=m.state;net.level=m.level;net.done=new Set(m.done);
   if(m.state==='lobby'){mode='lobby';game=null;showLobby()}else if(screen==='lobby')closeUI();return}
- if(m.t==='s'){const d=m.d;if(!game||game.li!==d.li||game.n!==d.n||mode!=='online'){mode='online';const fresh=!game||game.li!==d.li;game=H.createGame(d.li,d.n);game.players=[];parts=[];net.snaps=[];pr.p=null;pr.world=null;pr.log.length=0;if(fresh)intro=3.2;if(screen==='lobby'||screen==='win')closeUI()}
+ if(m.t==='s'){const d=H.unpackSnap(m.d);{const now=performance.now();if(net.lastAt){const dt_=now-net.lastAt;net.iv=net.iv*0.9+dt_*0.1;net.jit=net.jit*0.9+Math.abs(dt_-net.iv)*0.1;net.delay=clamp(net.iv+net.jit*2.5+10,50,220)}net.lastAt=now;net.upsN++}if(!game||game.li!==d.li||game.n!==d.n||mode!=='online'){mode='online';const fresh=!game||game.li!==d.li;game=H.createGame(d.li,d.n);game.players=[];parts=[];net.snaps=[];pr.p=null;pr.world=null;pr.log.length=0;if(fresh)intro=3.2;if(screen==='lobby'||screen==='win')closeUI()}
   handleFx(d.fx||[],game);net.snaps.push({at:performance.now(),d});if(net.snaps.length>12)net.snaps.shift();reconcile(d);
   if(d.S.won&&screen!=='win'&&screen!=='pause'&&d.S.winT>0.6)showWin();if(!d.S.won&&screen==='win')closeUI()}}
 function showLobby(){setKeys(true);screen='lobby';const L=H.LEVELS[net.level];const p=panel('<h3>Room code</h3><div class="bigcode">'+esc(net.code)+'</div><p>Friends open this page, choose Play online, and enter the code.</p><div class="plist">'+net.players.map(q=>'<div class="pl"><i style="background:'+PAL[q.slot].H+'"></i><div>'+esc(q.name)+(q.slot===net.slot?' <small>(you)</small>':'')+'<br><small>'+PAL[q.slot].n+(q.host?' · host':'')+'</small></div></div>').join('')+'</div>'
@@ -426,7 +428,7 @@ function showLobby(){setKeys(true);screen='lobby';const L=H.LEVELS[net.level];co
 let camC=null;
 function clientCam(g,dt){const S=g.S,key=g.li+'-'+g.n;if(!camC||camC.key!==key||S.restartT>0){camC={key,cam:S.cam,camY:S.camY||0,zoom:S.zoom||1,zl:null,zHold:0,gy:{},snap:true}}
  S.cam=camC.cam;S.camY=camC.camY;S.zoom=camC.zoom;S.zl=camC.zl;S.zHold=camC.zHold;S.camGY=camC.gy;const t=S.t;H.camera(g,Math.min(dt,0.05),camC.snap);S.t=t;camC.snap=false;camC.cam=S.cam;camC.camY=S.camY;camC.zoom=S.zoom;camC.zl=S.zl;camC.zHold=S.zHold;camC.gy=S.camGY}
-function interp(){const sn=net.snaps;if(!sn.length)return;const tgt=performance.now()-70;let a=sn[0],b=sn[sn.length-1];
+function interp(){const sn=net.snaps;if(!sn.length)return;const tgt=performance.now()-net.delay;let a=sn[0],b=sn[sn.length-1];
  for(let i=0;i<sn.length-1;i++){if(sn[i].at<=tgt&&sn[i+1].at>=tgt){a=sn[i];b=sn[i+1];break}}
  if(tgt>=b.at)a=b;const al=a===b?1:clamp((tgt-a.at)/(b.at-a.at),0,1),L=(u,v)=>u+(v-u)*al;
  const A=a.d,Bd=b.d;H.applySnapshot(game,Bd);
@@ -441,13 +443,14 @@ function interp(){const sn=net.snaps;if(!sn.length)return;const tgt=performance.
  if(pr.p){const me=game.players.find(p=>p.slot===net.slot);if(me&&!me.dead&&!me.inside)Object.assign(me,{x:pr.p.x+pr.off.x,y:pr.p.y+pr.off.y,vx:pr.p.vx,vy:pr.p.vy,face:pr.p.face,grounded:pr.p.grounded,squash:pr.p.squash,anim:pr.p.anim,row:pr.p.row})}}
 
 // ---------- loop ----------
-function resize(){DPR=Math.min(2,window.devicePixelRatio||1);const cw=Math.max(240,innerWidth),ch=Math.max(160,innerHeight);scr.width=Math.round(cw*DPR);scr.height=Math.round(ch*DPR);
+function resize(){DPR=LOWQ?1:Math.min(2,window.devicePixelRatio||1);const cw=Math.max(240,innerWidth),ch=Math.max(160,innerHeight);scr.width=Math.round(cw*DPR);scr.height=Math.round(ch*DPR);
  const asp=cw/ch;if(asp>=VW/VH){VHv=VH;VWv=Math.min(VH*asp,VH*3.6)}else{VWv=VW;VHv=VW/asp}
  BW=Math.ceil(VWv*2);BH=Math.ceil(VHv*2);BGS=Math.min(1,360/(VHv*2));bgC.width=Math.ceil(VWv*2*BGS)+1;bgC.height=360;scene.width=BW*2+8;scene.height=BH*2+8;
  vig.width=scr.width;vig.height=scr.height;const v=vig.getContext('2d'),W=vig.width,Hh=vig.height,gd=v.createRadialGradient(W/2,Hh/2,Math.min(W,Hh)*0.38,W/2,Hh/2,Math.hypot(W,Hh)*0.56);gd.addColorStop(0,'rgba(6,3,16,0)');gd.addColorStop(1,'rgba(6,3,16,0.38)');v.fillStyle=gd;v.fillRect(0,0,W,Hh)}
 addEventListener('resize',resize);resize();
+function setLowQ(v,msg){LOWQ=v;try{localStorage.setItem('hp-fast',v?'1':'0')}catch(e){}resize();toast=msg||(v?'Fast graphics':'Sharp graphics');toastT=2.4}
 function toggleFS(){try{const p=document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen({navigationUI:'hide'});if(p&&p.catch)p.catch(()=>{})}catch(e){}}
-let last=performance.now(),acc=0;
+let last=performance.now(),acc=0,pingT=0,fpsEMA=60,slowF=0,showNet=false;
 function frame(now){const dt=Math.min(0.1,(now-last)/1000);last=now;TT+=dt;
  shake=Math.max(0,shake-dt);for(const s in bubbles)bubbles[s].t-=dt;flash=Math.max(0,flash-dt);intro=Math.max(0,intro-dt);toastT=Math.max(0,toastT-dt);for(const k in springT)springT[k]-=dt;
  for(const q of parts){q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=q.g*dt;q.vx*=1-dt*2;q.life-=dt}parts=parts.filter(q=>q.life>0);if(parts.length>700)parts.splice(0,parts.length-700);
@@ -458,12 +461,13 @@ function frame(now){const dt=Math.min(0.1,(now-last)/1000);last=now;TT+=dt;
    else if(r.jp&&!screen&&!g.S.won){const fr=[0,1,2,3,4,5,6,7].find(s=>localSchemes[s]==null);if(fr!=null){localSchemes[fr]=id;H.addPlayer(g,fr)}}}
   if(screen!=='pause'){acc+=dt;while(acc>=H.STEP){H.step(g,H.STEP);H.clearEdges(g);acc-=H.STEP}}else acc=0;
   handleFx(g.fx.splice(0),g);if(g.S.won&&g.S.winT>0.6&&screen!=='win')showWin()}
- else if(mode==='online'&&game){g=game;const inp=screen==='pause'?{x:0,j:false,d:false}:onlineInput();
+ else if(mode==='online'&&game){g=game;pingT-=dt;if(pingT<=0){pingT=2;send({t:'ping',c:performance.now()})}for(const p of game.players){if(p.blinkT==null)p.blinkT=3;p.blinkT-=dt;if(p.blinkT<0)p.blinkT=2+Math.random()*3}const inp=screen==='pause'?{x:0,j:false,d:false}:onlineInput();
   if(!pr.last||inp.x!==pr.last.x||inp.j!==pr.last.j||inp.d!==pr.last.d){pr.q++;pr.k=0;if(inp.j&&!(pr.last&&pr.last.j))pr.jp=true;if(inp.d&&!(pr.last&&pr.last.d))pr.dp=true;pr.last=inp;send({t:'in',x:inp.x,j:inp.j,d:inp.d,q:pr.q})}
   pr.acc+=dt;let ns=0;while(pr.acc>=H.STEP&&ns<14){const e={q:pr.q,k:pr.k++,x:inp.x,j:inp.j,jp:pr.jp,d:inp.d,dp:pr.dp};pr.jp=pr.dp=false;pr.log.push(e);if(pr.log.length>720)pr.log.shift();if(pr.p&&pr.world)simEntry(pr.world,pr.p,e);pr.acc-=H.STEP;ns++}if(ns>=14)pr.acc=0;
   const dec=Math.exp(-dt*10);pr.off.x*=dec;pr.off.y*=dec;interp();clientCam(game,dt)}
  else{demoT+=dt;if(demoT>9){demoT=0;demoW=(demoW+1)%5;demo=H.createGame(demoW*5+(demoW===0?0:1))}g=demo;demo.S.t+=dt;demo.S.cam=(Math.sin(demoT*0.12-1.2)*0.5+0.5)*Math.min(demo.LW-VW,700)}
- const d0=performance.now();draw(g,dt);const dd=performance.now()-d0;drawEMA=drawEMA*0.95+dd*0.05;if(!LOWQ){slowN=drawEMA>13?slowN+1:0;if(slowN>120){LOWQ=true;console.info('Huddle Peak: using the low-cost renderer')}}hit.clear();requestAnimationFrame(frame)}
+ fpsEMA=fpsEMA*0.95+(dt>0?1/dt:60)*0.05;if(!LOWQ&&g!==demo){slowF=fpsEMA<42?slowF+dt:0;if(slowF>3)setLowQ(true,'Switched to fast graphics to keep things smooth (G to change)')}
+ const d0=performance.now();draw(g,dt);const dd=performance.now()-d0;drawEMA=drawEMA*0.95+dd*0.05;if(!LOWQ){slowN=drawEMA>13?slowN+1:0;if(slowN>120)setLowQ(true,'Switched to fast graphics to keep things smooth (G to change)')}hit.clear();requestAnimationFrame(frame)}
 showTitle();requestAnimationFrame(frame);
 window.__hp={get game(){return game},net,pr,startLocal,get mode(){return mode},draw,scr,buildBG,buildWorld,view:()=>({BW,BH,VWv,VHv,camX,camY,VZW,VZH,DPR,LOWQ,drawEMA:+drawEMA.toFixed(2)}),setLowQ:v=>LOWQ=v,resize};
 }

@@ -121,6 +121,7 @@ server.on('upgrade', (req, socket) => {
       case 'lobby': if (isHost) toLobby(room); break;
       case 'in': if (room && room.game) HP.setInput(room.game, c.slot, Math.max(-1, Math.min(1, m.x | 0)), !!m.j, !!m.d, m.q | 0); break;
       case 'emote': if (room && Date.now() - (c.lastEmote || 0) > 350) { c.lastEmote = Date.now(); const out = JSON.stringify({ t: 'emote', slot: c.slot, i: Math.max(0, Math.min(15, m.i | 0)) }); for (const k of room.clients) k.ws.send(out); } break;
+      case 'ping': ws.send(JSON.stringify({ t: 'pong', c: m.c })); break;
       case 'leave': leave(c); break;
     }
   };
@@ -141,7 +142,7 @@ setInterval(() => {
     for (let s = 0; s < steps * 2; s++) { HP.step(g, HP.STEP); HP.clearEdges(g); }
     if (g.S.won && !room.wonSent) { room.wonSent = true; room.done.add(room.level); }
     room.tick += steps;
-    if (room.tick >= 2) { room.tick = 0; const msg = '{"t":"s","d":' + HP.serialize(g) + '}'; for (const c of room.clients) c.ws.send(msg); }
+    if (room.tick >= 2) { room.tick = 0; const msg = '{"t":"s","d":' + HP.packSnap(g) + '}'; for (const c of room.clients) c.ws.send(msg); }
   }
 }, TICK / 2);
 setInterval(() => { for (const room of rooms.values()) for (const c of room.clients) c.ws.ping(); }, 20000);
