@@ -28,6 +28,10 @@ The camera follows everyone and zooms out as the team spreads, including on the 
 
 Your own climber is predicted on your machine, so it responds instantly. The server's answer corrects it smoothly, and other players are shown about 70 ms in the past so they move smoothly. To test with fake lag, run `LAG_MS=60 node server.js`, which adds 60 ms each way.
 
+## Display
+
+The game fills the whole browser window at any shape. Wider windows show a little more of the level to the sides; taller windows show more above and below. Press **F** for true fullscreen. The pixel art is scaled sharply, so it stays crisp when the camera zooms out. On a computer that draws in software instead of on the graphics card, the game automatically switches to a cheaper scaling mode to keep the frame rate up.
+
 ## Run it locally
 
 ```
@@ -60,7 +64,8 @@ On the free tier the server sleeps after about 15 minutes with no visitors, so t
 ## Files
 
 - `public/game.js` is the game simulation and all 25 levels. The server and the browser share it.
-- `public/index.html` handles drawing (640×360 pixel art, generated in code), sound, menus, the lobby and input.
+- `public/art.js` paints the pixel art in code: layered backgrounds for each world and the terrain for each level, built once and cached.
+- `public/index.html` draws the live game full-window, and handles sound, menus, the lobby and input.
 - `server.js` is the web server, the WebSocket code (hand-written, no packages) and the rooms.
 - `test/` holds the automated puzzle, traversal and team-size checks. Run them with `npm test`.
 - `build-standalone.js` builds a single offline HTML file in `dist/` (local play only).
