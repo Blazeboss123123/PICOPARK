@@ -277,7 +277,7 @@ function adapt(g) {
 
 function reset(g, keep) {
   const o = g.S;
-  const S = g.S = { t: keep ? o.t : 0, deaths: keep ? o.deaths : 0, restartT: 0, culprit: -1, cause: '', lastCause: keep ? o.lastCause : '', won: false, winT: 0,
+  const S = g.S = { t: keep ? o.t : 0, deaths: keep ? o.deaths : 0, dc: keep && o.dc ? o.dc : {}, restartT: 0, culprit: -1, cause: '', lastCause: keep ? o.lastCause : '', won: false, winT: 0,
     cam: 0, camY: 0, zoom: 1, wl: -1e5, wr: 1e5, scroll: 0,
     sig: {}, plates: g.plateDefs.map(() => 0), levers: g.leverDefs.map(() => 0), crates: [], lifts: [], bals: [], bridges: [], crumb: {}, rafts: [], crush: [],
     torches: g.torchDefs.map(() => 0), flip: 0, flipCd: 0, ghost: {}, light: { ph: 0, t: 0 }, key: { x: g.keyHome.x, y: g.keyHome.y, carrier: -1, used: false }, door: { open: false, t: 0 } };
@@ -286,7 +286,7 @@ function reset(g, keep) {
   g.liftDefs.forEach(d => S.lifts.push({ x: d.x, y: d.y, w: d.w, h: 6, u: 0, dir: 1, pause: 0, hold: 0, dx: 0, dy: 0, r: 0, needN: 0, isLift: true }));
   g.balDefs.forEach(d => S.bals.push({ o: 0, wa: 0, wb: 0, pans: [{ x: d.ax, y: d.ay, w: d.w, h: 6, dx: 0, dy: 0, isPan: true }, { x: d.bx, y: d.by, w: d.w, h: 6, dx: 0, dy: 0, isPan: true }] }));
   g.bridgeDefs.forEach(d => S.bridges.push({ x: d.x, y: d.y, w: d.w, h: 4, st: 0, tmr: 0, vy: 0, dx: 0, dy: 0, n: 0, isBridge: true }));
-  g.raftDefs.forEach(d => S.rafts.push({ x: d.x, y: d.y, w: d.w, h: 6, dx: 0, dy: 0, mv: 0, n: 0, isRaft: true }));
+  g.raftDefs.forEach(d => S.rafts.push({ x: d.x, y: d.y, w: d.w, h: 6, dx: 0, dy: 0, mv: 0, n: 0, push: 0, isRaft: true }));
   g.crushDefs.forEach(d => S.crush.push({ x: d.x, y: d.y, w: d.w, h: d.h, dx: 0, dy: 0, ct: 0, isCrush: true }));
   g.crumbTiles.forEach(i => S.crumb[i] = [0, 0]);
   g.crateOn = S.crates.map(() => null);
@@ -410,7 +410,7 @@ const PLAT = r => r.isPlayer || r.isCrate || r.isLift || r.isPan || r.isBridge |
 // ---------- death / restart ----------
 function kill(g, p, cause) {
   const S = g.S; if (!alive(p) || S.restartT > 0 || S.won) return;
-  p.dead = 99; S.restartT = 1.2; S.deaths++; S.culprit = p.slot; S.cause = cause || 'oops'; S.lastCause = S.cause + '@' + Math.round(p.x) + ',' + Math.round(p.y) + '#' + p.slot;
+  p.dead = 99; S.restartT = 1.2; S.deaths++; S.dc[p.slot] = (S.dc[p.slot] || 0) + 1; S.culprit = p.slot; S.cause = cause || 'oops'; S.lastCause = S.cause + '@' + Math.round(p.x) + ',' + Math.round(p.y) + '#' + p.slot;
   if (S.key.carrier === p.slot) S.key.carrier = -1;
   fx(g, 'die', p.x + 5, p.y + 7, p.slot);
 }
@@ -444,6 +444,8 @@ function step(g, dt) {
 }
 function sawPos(g, sd) { const u = (1 - Math.cos(g.S.t * sd.spd)) / 2; return { x: sd.x + (sd.x2 - sd.x) * u, y: sd.y + (sd.y2 - sd.y) * u }; }
 function crushTiming(d) { const dropT = d.drop / 320, waitB = 0.6, riseT = d.drop / 45, waitT = Math.max(0.3, d.period - dropT - waitB - riseT); return { dropT, waitB, riseT, waitT, total: waitT + dropT + waitB + riseT }; }
+function crushNext(g, i, dt) { const S = g.S, c = S.crush[i], d = g.crushDefs[i], T = crushTiming(d); if (d.sig && S.sig[d.sig].on) return Math.max(d.y, c.y - 45 * dt);
+  c.ct += dt; const { ph } = crushPhase(g, i); let u; if (ph < T.waitT) u = 0; else if (ph < T.waitT + T.dropT) u = (ph - T.waitT) / T.dropT; else if (ph < T.waitT + T.dropT + T.waitB) u = 1; else u = 1 - (ph - T.waitT - T.dropT - T.waitB) / T.riseT; return d.y + u * d.drop; }
 function crushPhase(g, i) { const d = g.crushDefs[i], c = g.S.crush[i], T = crushTiming(d); const ph = ((c.ct + d.off) % T.total + T.total) % T.total; return { ph, T, warn: ph > T.waitT - 0.45 && ph < T.waitT }; }
 
 function pressing(g, pl) {
@@ -477,6 +479,8 @@ function updSignals(g, dt) {
   }
 }
 function baseOf(p) { let o = p.on, k = 0; while (o && o.isPlayer && k++ < MAXP) { if (!alive(o)) return null; o = o.on; } return o; }
+// A rising platform lifts everyone riding it (bottom of a stack first), so nobody sinks in and gets shoved sideways.
+function carryUp(g, plat, dy) { if (!(dy < 0)) return; const rs = g.players.filter(p => alive(p) && p.on && baseOf(p) === plat).sort((a, b) => b.y - a.y); for (const p of rs) move(g, p, dy, 'y'); }
 function ridersOf(g, plat) { let n = 0; for (const p of g.players) if (alive(p) && p.on && baseOf(p) === plat) n++; return n; }
 function nonRiderBlock(g, plat, nx, ny) {
   const r = { x: nx, y: ny, w: plat.w, h: plat.h };
@@ -484,7 +488,8 @@ function nonRiderBlock(g, plat, nx, ny) {
   for (let i = 0; i < g.S.crates.length; i++) if (g.crateOn[i] !== plat && ov(g.S.crates[i], r)) return true;
   return false;
 }
-function aboardRaft(g, r) { return g.players.filter(p => alive(p) && p.x + p.w > r.x + 1 && p.x < r.x + r.w - 1 && p.y + p.h <= r.y + 0.6 && p.y + p.h >= r.y - 80); }
+function aboardRaft(g, r) { return g.players.filter(p => alive(p) && p.x + p.w / 2 > r.x && p.x + p.w / 2 < r.x + r.w && p.y + p.h <= r.y + 0.6 && p.y + p.h >= r.y - 80 && (!p.grounded || baseOf(p) === r)); }
+function raftOf(p) { const b = p.on ? (p.on.isRaft ? p.on : p.on.isPlayer ? baseOf(p) : null) : null; return b && b.isRaft ? b : null; }
 function updLifts(g, dt) {
   g.S.lifts.forEach((l, i) => { const S = g.S;
     const d = g.liftDefs[i], dist = Math.hypot(d.x2 - d.x, d.y2 - d.y) || 1, need = d.need === 0 ? 0 : needOf(g, d.need);
@@ -494,7 +499,7 @@ function updLifts(g, dt) {
     else { const go = d.exact ? l.r === need : l.r >= need; if (go) { l.u = approach(l.u, 1, d.spd / dist * dt); if (l.u >= 1) l.hold = 1.4; } else if (l.hold > 0 && l.u >= 1) l.hold -= dt; else l.u = approach(l.u, 0, d.spd / dist * dt); }
     const nx = d.x + (d.x2 - d.x) * l.u, ny = d.y + (d.y2 - d.y) * l.u;
     if (nonRiderBlock(g, l, nx, ny)) { l.u = u0; l.dx = l.dy = 0; return; }
-    l.dx = nx - l.x; l.dy = ny - l.y; l.x = nx; l.y = ny;
+    l.dx = nx - l.x; l.dy = ny - l.y; l.x = nx; l.y = ny; carryUp(g, l, l.dy);
   });
 }
 function updMovers(g, dt) {
@@ -502,21 +507,20 @@ function updMovers(g, dt) {
   updLifts(g, dt);
   S.rafts.forEach((r, i) => {
     const d = g.raftDefs[i], ab = aboardRaft(g, r), all = g.players.filter(alive).length; r.n = ab.length;
-    let dir = 0; if (ab.length && ab.length === all) { const d0 = ab[0].input.x; if (d0 && ab.every(p => p.input.x === d0)) dir = d0; }
+    const nR = ab.filter(p => p.input.x > 0).length, nL = ab.filter(p => p.input.x < 0).length; r.push = Math.max(nR, nL);
+    let dir = 0; if (ab.length && ab.length === all) { if (nR === all) dir = 1; else if (nL === all) dir = -1; }
     const lo = Math.min(d.x, d.x2), hi = Math.max(d.x, d.x2);
     const nx = clamp(r.x + dir * RAFT * dt, lo, hi);
     r.dx = nx - r.x; r.mv = r.dx ? dir : 0; r.x = nx; r.dy = 0;
     for (const p of ab) { p.row = r.mv ? 0.25 : Math.max(0, p.row - dt); if (r.dx && p.on !== r) move(g, p, r.dx, 'x'); }
   });
   S.crush.forEach((c, i) => {
-    const d = g.crushDefs[i], T = crushTiming(d); let ny;
-    if (d.sig && S.sig[d.sig].on) ny = Math.max(d.y, c.y - 45 * dt);
-    else { c.ct += dt; const { ph } = crushPhase(g, i); let u; if (ph < T.waitT) u = 0; else if (ph < T.waitT + T.dropT) u = (ph - T.waitT) / T.dropT; else if (ph < T.waitT + T.dropT + T.waitB) u = 1; else u = 1 - (ph - T.waitT - T.dropT - T.waitB) / T.riseT; ny = d.y + u * d.drop; }
+    const d = g.crushDefs[i]; let ny = crushNext(g, i, dt);
     const r = { x: c.x, y: ny, w: c.w, h: c.h };
     for (const cr of S.crates) if (ov(cr, r) && ny > c.y) ny = Math.min(ny, cr.y - c.h);
     if (ny > c.y + 0.01) { r.y = ny; for (const p of g.players) if (alive(p) && p.on !== c && ov(p, r)) { if (p.grounded || p.y > c.y + c.h - 4) kill(g, p, 'crush'); else move(g, p, ny + c.h - p.y, 'y'); } if (ny - c.y > 1.5 && ny >= d.y + d.drop - 0.01 && c.y < d.y + d.drop - 0.01) fx(g, 'slam', c.x + c.w / 2, ny + c.h); }
     else if (ny < c.y - 0.01 && nonRiderBlock(g, c, c.x, ny)) ny = c.y;
-    c.dy = ny - c.y; c.y = ny; c.dx = 0;
+    c.dy = ny - c.y; c.y = ny; c.dx = 0; carryUp(g, c, c.dy);
   });
   S.bals.forEach((b, i) => {
     const d = g.balDefs[i]; let wa = ridersOf(g, b.pans[0]), wb = ridersOf(g, b.pans[1]);
@@ -525,7 +529,7 @@ function updMovers(g, dt) {
     const o0 = b.o; b.o = approach(b.o, clamp((wa - wb) * d.unit, -d.max, d.max), 45 * dt);
     const ya = d.ay + b.o, yb = d.by - b.o;
     if (nonRiderBlock(g, b.pans[0], b.pans[0].x, ya) || nonRiderBlock(g, b.pans[1], b.pans[1].x, yb)) { b.o = o0; b.pans[0].dy = b.pans[1].dy = 0; return; }
-    b.pans[0].dy = ya - b.pans[0].y; b.pans[1].dy = yb - b.pans[1].y; b.pans[0].y = ya; b.pans[1].y = yb;
+    b.pans[0].dy = ya - b.pans[0].y; b.pans[1].dy = yb - b.pans[1].y; b.pans[0].y = ya; b.pans[1].y = yb; carryUp(g, b.pans[0], b.pans[0].dy); carryUp(g, b.pans[1], b.pans[1].dy);
   });
   S.bridges.forEach((b, i) => {
     const d = g.bridgeDefs[i]; b.n = ridersOf(g, b); b.dy = 0;
@@ -594,6 +598,10 @@ function updPlayer(g, p, dt) {
     if (p.x + p.w > f.x + 1 && p.x < f.x + f.w - 1 && p.y + p.h > top && p.y < f.y) { const str = 1500 * clamp((p.y + p.h - top) / 40, 0, 1); p.vy = Math.max(-150, p.vy - str * dt); p.cut = true; }
   }
   const hx = move(g, p, p.vx * dt, 'x'); if (hx && !hx.isCrate && !hx.isPlayer) p.vx = 0;
+  const rb = raftOf(p);
+  if (rb) { const d = g.raftDefs[S.rafts.indexOf(rb)], lo = Math.min(d.x, d.x2), hi = Math.max(d.x, d.x2);
+    if (rb.x > lo + 0.5 && p.x < rb.x) { move(g, p, rb.x - p.x, 'x'); p.vx = Math.max(0, p.vx); }
+    if (rb.x < hi - 0.5 && p.x + p.w > rb.x + rb.w) { move(g, p, rb.x + rb.w - p.w - p.x, 'x'); p.vx = Math.min(0, p.vx); } }
   const vyb = p.vy, wasG = p.grounded;
   const hy = move(g, p, p.vy * dt, 'y');
   if (hy) { if (vyb > 0 && hy.ch === 'o') { p.vy = -SPRING; p.cut = true; p.squash = -1; fx(g, 'spring', hy.x + 5, hy.y, p.slot); } else p.vy = 0; }
@@ -655,8 +663,10 @@ function predictStep(world, p, dt) {
   const S = world.S;
   updLifts(world, dt);
   S.rafts.forEach((r, i) => { const d = world.raftDefs[i]; r.x = clamp(r.x + r.dx, Math.min(d.x, d.x2), Math.max(d.x, d.x2)); });
-  for (const c of S.crush) c.y += c.dy;
-  for (const b of S.bals) for (const pn of b.pans) pn.y += pn.dy;
+  S.crush.forEach((c, i) => { let ny = crushNext(world, i, dt); if (ny < c.y - 0.01 && nonRiderBlock(world, c, c.x, ny)) ny = c.y; c.dy = ny - c.y; c.y = ny; carryUp(world, c, c.dy); });
+  S.bals.forEach((b, bi) => { const d = world.balDefs[bi]; b.pans.forEach((pn, k) => { const y0 = k ? d.by : d.ay; pn.y = clamp(pn.y + pn.dy, y0 - d.max, y0 + d.max); }); });
+  // friends aren't simulated here, but they still ride whatever they stand on
+  for (const o of world.players) { if (o === p || !alive(o) || !o.on) continue; const b = baseOf(o); if (b && b !== p && (b.isLift || b.isCrush || b.isRaft || b.isPan)) { o.x += b.dx || 0; if ((b.dy || 0) > 0 || b.isRaft) o.y += b.dy || 0; } }
   S.t += dt; if (S.flipCd > 0) S.flipCd -= dt;
   updPlayer(world, p, dt);
   p.input.jumpP = false; p.input.downP = false;

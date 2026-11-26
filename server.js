@@ -120,6 +120,7 @@ server.on('upgrade', (req, socket) => {
       case 'restart': if (isHost && room.game) startLevel(room, room.level); break;
       case 'lobby': if (isHost) toLobby(room); break;
       case 'in': if (room && room.game) HP.setInput(room.game, c.slot, Math.max(-1, Math.min(1, m.x | 0)), !!m.j, !!m.d, m.q | 0); break;
+      case 'emote': if (room && Date.now() - (c.lastEmote || 0) > 350) { c.lastEmote = Date.now(); const out = JSON.stringify({ t: 'emote', slot: c.slot, i: Math.max(0, Math.min(15, m.i | 0)) }); for (const k of room.clients) k.ws.send(out); } break;
       case 'leave': leave(c); break;
     }
   };

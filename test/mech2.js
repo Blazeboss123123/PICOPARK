@@ -40,7 +40,8 @@ const f=v=>Math.round(v*10)/10;
 {const g=G(20,2);const r=g.S.rafts[0];put(g,0,r.x+10,136);put(g,1,r.x+30,136);run(g,0.3);run(g,1,p=>p.slot===0?{x:1}:null);ok(Math.abs(r.x-100)<0.5,'raft needs all pushing');
  run(g,1,()=>({x:1}));ok(r.x>130&&!P(g,0).dead,'raft moves x='+f(r.x));const rx=r.x;run(g,0.5,p=>({x:p.slot?1:-1}));ok(Math.abs(r.x-rx)<0.5,'raft stops on disagreement');
  ok(P(g,0).x>r.x&&P(g,0).x<r.x+r.w,'P on raft');
- const g2=G(20,2);const r2=g2.S.rafts[0];put(g2,0,r2.x+10,136);put(g2,1,40,136);run(g2,1,()=>({x:1}));ok(Math.abs(r2.x-100)<0.5,'raft waits for all aboard');}
+ const g2=G(20,2);const r2=g2.S.rafts[0];put(g2,0,r2.x+40,136);put(g2,1,40,136);run(g2,0.2);run(g2,1.5,p=>p.slot===0?{x:1}:null);ok(Math.abs(r2.x-100)<0.5,'raft waits for all aboard');ok(!g2.S.deaths&&P(g2,0).x+10<=r2.x+r2.w+0.01,'rail: pushing alone does not walk you off into the lava x='+f(P(g2,0).x));
+ put(g2,1,92,136);run(g2,0.2);ok(r2.n===1,'someone on the shore is not aboard n='+r2.n);}
 // Conveyor (21)
 {const g=G(21);put(g,0,150,136);put(g,1,40,136);run(g,0.5);ok(P(g,0).x>165,'belt carries '+f(P(g,0).x));
  const g2=G(21);put(g2,0,645,136);put(g2,1,770,136);run(g2,0.2);ok(g2.S.sig.a.on,'plate on belt');run(g2,1.5,p=>p.slot===0?{x:-1}:null);ok(P(g2,0).x<645,'walk against belt '+f(P(g2,0).x));}

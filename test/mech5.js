@@ -27,6 +27,11 @@ for(let n=5;n<=8;n++)for(let i=0;i<25;i++){const g=G(i,n);ok(g.n===n&&g.players.
 {const g=G(9,8),l=g.S.lifts[0];ok(l.w===40&&g.liftDefs[0].need===4,'HC exact 4 at n8');for(let i=0;i<4;i++)put(g,i,140+i*10,136);for(let i=4;i<8;i++)put(g,i,20+(i-4)*12,136);run(g,0.2);run(g,2.5);ok(l.y<=91,'HC 4 riders move y='+f(l.y));}
 // Row together at 8: raft is 8 tiles; it only moves when all 8 aboard push the same way
 {const g=G(20,8),r=g.S.rafts[0];ok(r.w===80,'RT raft 8 wide');for(let i=0;i<8;i++)put(g,i,101+i*10,136);run(g,0.3);const x0=r.x;run(g,1,p=>p.slot<7?{x:1}:{x:0});ok(Math.abs(r.x-x0)<0.5,'RT 7 of 8 pushing: no move');run(g,1,()=>({x:1}));ok(r.x>x0+20,'RT all 8 push moves '+f(r.x-x0));}
+// Row together, 5 players like a real game: walk aboard, then start pushing at different moments; nobody falls off and it goes
+{const g=G(20,5),r=g.S.rafts[0];g.players.forEach((p,i)=>put(g,p.slot,10+i*14,136));run(g,0.3);run(g,1.6,p=>({x:1}));run(g,0.4);ok(r.n===5,'RT5 all five walked aboard n='+r.n);const x0=r.x;
+ run(g,1.0,(p,t)=>({x:t>p.slot*0.2?1:0}));ok(!g.S.deaths,'RT5 early pushers stay on the raft '+g.S.lastCause);ok(r.x>x0+5,'RT5 raft goes once everyone pushes '+f(r.x-x0));ok(r.push===5,'RT5 lights show 5 pushing');}
+// death counter: each death is counted against whoever died
+{const g=G(0,3);const p=P(g,2);p.y=400;run(g,2);ok(g.S.dc[2]===1&&g.S.deaths===1,'death counted for P3');P(g,2).y=400;run(g,2);P(g,0).y=400;run(g,2);ok(g.S.dc[2]===2&&g.S.dc[0]===1&&g.S.deaths===3,'counts per player '+JSON.stringify(g.S.dc));HP.addPlayer(g,3);ok(g.S.dc[2]===2,'counter survives a team change');}
 // door holds everyone
 {const g=G(0,8);g.S.key.used=true;g.S.door.open=true;g.players.forEach((p,i)=>{p.inside=true});run(g,0.5);ok(g.S.won,'all 8 inside wins');}
 console.log('pass',pass,'fail',fail);if(fail)process.exitCode=1;
