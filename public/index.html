@@ -12,53 +12,107 @@
 *{box-sizing:border-box;min-width:0}
 html,body{margin:0;height:100%;overflow:hidden;background:#05030c;color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
 #screen{position:fixed;inset:0;width:100vw;height:100vh;display:block;outline:none;touch-action:none}
-#ui{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px 16px 64px;pointer-events:none}
+#ui{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(12px,3vh,40px) clamp(12px,4vw,64px) clamp(44px,7vh,70px)}
 #ui:empty{display:none}
-.panel{pointer-events:auto;background:rgba(14,8,30,.9);border:2px solid #3d2a70;border-radius:12px;padding:clamp(14px,2.4vw,26px);width:min(800px,100%);max-height:100%;overflow:auto;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;box-shadow:0 18px 60px rgba(0,0,0,.45)}
-.panel h2{font:400 clamp(18px,3.4vw,30px)/1.3 "Press Start 2P",monospace;margin:0;color:#fff;text-shadow:0 3px 0 #3d2a70}
-.panel h3{font:400 12px/1.5 "Press Start 2P",monospace;margin:0;color:var(--gold)}
-.panel p{margin:0;color:var(--mut)}
-.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;width:100%}
-button{font:400 12px/1.4 "Press Start 2P",monospace;color:#120a26;background:var(--gold);border:0;border-bottom:4px solid #b88a1a;border-radius:8px;padding:12px 16px;min-height:44px;cursor:pointer}
-button:hover{filter:brightness(1.08)}button:active{transform:translateY(2px);border-bottom-width:2px}
-button:focus-visible{outline:3px solid #fff;outline-offset:2px}
-button.alt{background:#2a1c50;color:var(--ink);border-bottom-color:#160c2e}
-button.teal{background:var(--teal);border-bottom-color:#1a8a80}
-button:disabled{opacity:.5;cursor:default;filter:none}
-input{font:16px system-ui,sans-serif;color:var(--ink);background:#0d0820;border:2px solid #45327a;border-radius:8px;padding:10px 12px;min-height:44px;width:min(260px,100%)}
-input:focus{outline:none;border-color:var(--teal)}
-input.code{font:400 16px "Press Start 2P",monospace;text-transform:uppercase;letter-spacing:4px;text-align:center;width:150px}
-.worlds{display:flex;flex-direction:column;gap:8px;width:100%}
-.world{display:grid;grid-template-columns:118px minmax(0,1fr);gap:8px;align-items:stretch}
-.world h4{margin:0;font:400 10px/1.5 "Press Start 2P",monospace;display:flex;align-items:center;justify-content:center;text-align:center;border-radius:8px;padding:6px;color:#fff}
-.levels{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
-.lv{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:#22164a;color:var(--ink);border-bottom-color:#130b2c;padding:6px 8px;min-height:44px;font-size:10px}
-.lv b{font-size:13px;color:var(--gold);font-weight:400}.lv span{font:12px/1.25 system-ui,sans-serif;color:var(--mut)}
-.lv.done{background:#163c45}.lv.sel{outline:3px solid var(--teal)}
-@media(max-width:620px){.world{grid-template-columns:1fr}.levels{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.plist{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;width:100%}
-.pl{display:flex;align-items:center;gap:8px;background:#22164a;border-radius:8px;padding:8px 10px;text-align:left}
-.pl i{width:18px;height:18px;border-radius:4px;flex:none}.pl small{color:var(--mut)}
-.bigcode{font:400 clamp(22px,5vw,34px)/1 "Press Start 2P",monospace;color:var(--gold);letter-spacing:6px}
-.err{color:#ff8f8f;font-size:14px;min-height:1em}
-.wstat{font-size:15px}.panel h3.worst{color:#ff8f8f}.panel h3.flaw{color:#7ff0e0}
-.dlist{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;width:100%}
-.dl{display:flex;align-items:center;gap:8px;background:#22164a;border-radius:8px;padding:6px 10px;text-align:left}
-.dl i{width:14px;height:14px;border-radius:4px;flex:none}.dl span{line-height:1.25}.dl small{color:var(--mut);font-size:12px}
-.dl b{margin-left:auto;font:400 13px/1 "Press Start 2P",monospace;color:#c9c0ea}.dl.top{background:#3a1630;outline:2px solid #e8404a}.dl.top b{color:#ff8f8f}
-.keys{position:fixed;left:0;right:0;bottom:0;display:none;flex-wrap:wrap;gap:4px 16px;justify-content:center;color:#c9c0ea;font-size:12px;padding:10px 12px;background:linear-gradient(transparent,rgba(8,4,20,.85));pointer-events:none}
-body.menu .keys{display:flex}
-.keys span{white-space:nowrap}.keys i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:0}
-kbd{font:inherit;font-size:11px;color:#e6e0ff;background:#1c1338;border:1px solid #3e2e70;border-radius:4px;padding:0 4px}
+#ui::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 80% at 50% 50%,rgba(8,4,20,.7),rgba(5,2,12,.93))}
+#ui.s-title::before{background:linear-gradient(rgba(5,2,12,.72),rgba(5,2,12,.1) 30%,rgba(5,2,12,.25) 55%,rgba(5,2,12,.9) 100%),radial-gradient(ellipse 40% 42% at 50% 74%,rgba(5,2,12,.55),transparent)}
+#ui.s-levels::before,#ui.s-lobby::before{background:linear-gradient(90deg,rgba(5,2,12,.93),rgba(5,2,12,.78) 45%,rgba(5,2,12,.5) 80%,rgba(5,2,12,.62)),linear-gradient(transparent 55%,rgba(5,2,12,.75))}
+.scr{position:relative;pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:clamp(8px,2vh,22px);width:100%;max-height:100%;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;text-align:center}
+.px{font-family:"Press Start 2P",monospace;font-weight:400}
+/* logo */
+.logo{position:relative;display:flex;flex-direction:column;align-items:center;margin-bottom:clamp(4px,3.5vh,44px)}
+.logo h1{margin:0;font:400 clamp(28px,min(8vw,11vh),104px)/1.05 "Press Start 2P",monospace;letter-spacing:.03em;filter:drop-shadow(0 .055em 0 #c2471c) drop-shadow(0 .055em 0 #5a1a3e) drop-shadow(0 .12em 0 rgba(0,0,0,.5))}
+.logo h1 span,.big span{display:block;background:linear-gradient(#fffbea 0 24%,#ffe683 24% 48%,#ffc53a 48% 74%,#ff9529 74%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo h1 .l2{font-size:1.32em;letter-spacing:.12em;margin-top:.04em}
+.logo canvas{display:block;image-rendering:pixelated;pointer-events:none;margin-bottom:-2px}
+.mi[hidden]{display:none!important}
+.lvl .mi .ck{font:700 16px/1 system-ui,sans-serif}
+.tag{font:400 clamp(8px,1.1vw,12px)/1.6 "Press Start 2P",monospace;color:#d8cdfa;letter-spacing:.14em;text-shadow:0 2px 0 #160c2e;margin-top:clamp(10px,2.4vh,24px);opacity:.9}
+.big{margin:0;font:400 clamp(22px,min(5vw,8vh),56px)/1.1 "Press Start 2P",monospace;letter-spacing:.04em;filter:drop-shadow(0 .06em 0 #c2471c) drop-shadow(0 .06em 0 #5a1a3e) drop-shadow(0 .12em 0 rgba(0,0,0,.5))}
+.sub{font:400 clamp(9px,1.2vw,12px)/1.7 "Press Start 2P",monospace;color:#d8cdfa;letter-spacing:.08em;text-shadow:0 2px 0 #160c2e;margin:0}
+.note{margin:0;color:#b9addf;font-size:clamp(13px,1.4vw,15px);max-width:46ch;text-shadow:0 1px 2px #000}
+/* menu items */
+.menu{display:flex;flex-direction:column;align-items:center;gap:clamp(0px,.6vh,6px)}
+button{appearance:none;background:none;border:0;color:inherit;font:inherit;padding:0;margin:0;cursor:pointer}
+button:focus{outline:none}
+.mi{position:relative;padding:.6em 1.9em;font:400 clamp(12px,min(2vw,3vh),22px)/1 "Press Start 2P",monospace;color:#b7abdf;letter-spacing:.07em;text-shadow:0 3px 0 #120a26,0 0 14px rgba(0,0,0,.6);white-space:nowrap;transition:color .08s,transform .08s}
+.mi::before,.mi::after{content:'';position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,currentColor 20%,currentColor 80%,transparent);opacity:0;transition:opacity .1s}
+.mi::before{top:0}.mi::after{bottom:0}
+.mi.on{color:var(--gold);transform:scale(1.06)}
+.mi.on::before,.mi.on::after{opacity:.85}
+.mi i.ar{position:absolute;top:50%;width:.5em;height:.6em;margin-top:-.3em;background:currentColor;opacity:0;clip-path:polygon(0 0,100% 50%,0 100%)}
+.mi i.ar.l{left:.45em}.mi i.ar.r{right:.45em;clip-path:polygon(100% 0,0 50%,100% 100%)}
+.mi.on i.ar{opacity:1;animation:nudge .7s steps(2) infinite}
+.mi i.ar.r{animation-direction:reverse}
+@keyframes nudge{50%{transform:translateX(.18em)}}
+.mi small{color:#7ff0e0;font-size:.75em;margin-left:.8em}
+.mi:disabled{color:#5a4f86;cursor:default}
+.mi.sm{font-size:clamp(11px,min(1.5vw,2.6vh),16px)}
+/* hint bar */
+.hints{position:absolute;left:0;right:0;bottom:clamp(10px,2.2vh,22px);display:flex;justify-content:center;gap:6px 22px;flex-wrap:wrap;color:#a99dd4;font-size:13px;pointer-events:none;text-shadow:0 1px 2px #000;padding:0 90px}
+.ver{position:absolute;right:clamp(10px,2vw,22px);bottom:clamp(10px,2.2vh,22px);font:400 9px/1 "Press Start 2P",monospace;color:#7f74aa;letter-spacing:.1em}
+.who{position:absolute;left:clamp(10px,2vw,22px);bottom:clamp(10px,2.2vh,22px);font:400 9px/1 "Press Start 2P",monospace;color:#7f74aa;letter-spacing:.1em}
+kbd{display:inline-block;font:600 11px/1 system-ui,sans-serif;color:#efeaff;background:#241848;border:1px solid #4a3888;border-bottom-width:3px;border-radius:4px;padding:3px 6px 2px;margin:0 2px;min-width:20px;text-align:center}
+/* level select */
+.lvsel{flex-direction:row;align-items:stretch;justify-content:center;gap:clamp(16px,4vw,64px);max-width:1180px;text-align:left}
+.lvcol{display:flex;flex-direction:column;gap:clamp(6px,1.6vh,16px);min-width:min(340px,100%)}
+.whead{display:flex;align-items:center;gap:12px}
+.wnav{width:34px;height:34px;flex:none;display:grid;place-items:center;color:#b7abdf}
+.wnav:hover{color:var(--gold)}
+.wnav i{width:12px;height:14px;background:currentColor;clip-path:polygon(100% 0,0 50%,100% 100%)}
+.wnav.nx i{clip-path:polygon(0 0,100% 50%,0 100%)}
+.wname{flex:1;text-align:center}
+.wname small{display:block;font:400 9px/1.6 "Press Start 2P",monospace;color:#a99dd4;letter-spacing:.16em}
+.wname b{display:block;font:400 clamp(14px,min(2.2vw,3.6vh),24px)/1.3 "Press Start 2P",monospace;color:#fff;text-shadow:0 3px 0 var(--wc,#3d2a70)}
+.pips{display:flex;gap:6px;justify-content:center;margin-top:8px}
+.pips i{width:22px;height:5px;background:#2e2256}.pips i.on{background:var(--wc,#ffd23f);box-shadow:0 0 8px var(--wc)}
+.lvl{align-items:stretch;gap:2px}
+.lvl .mi{display:flex;align-items:center;gap:.9em;text-align:left;padding:.75em 1.6em .75em 1.9em;font-size:clamp(11px,min(1.5vw,2.7vh),16px);transform:none}
+.lvl .mi.on{transform:translateX(6px)}
+.lvl .mi b{font-weight:400;color:#7166a8;min-width:2.2em}.lvl .mi.on b{color:#fff}
+.lvl .mi .ck{margin-left:auto;color:#5ee08a;font-style:normal}
+.lvl .mi.pick b{color:#7ff0e0}.lvl .mi.pick .ck::after{content:' ◆';color:#7ff0e0}
+.lvinfo{display:flex;flex-direction:column;gap:12px;width:min(520px,46vw);align-self:center}
+.lvinfo .mm{width:100%;height:auto;image-rendering:pixelated;border:2px solid rgba(255,255,255,.14);background:#0a0618;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.lvinfo h3{margin:0;font:400 clamp(16px,min(2.4vw,4vh),28px)/1.3 "Press Start 2P",monospace;color:#fff;text-shadow:0 3px 0 var(--wc,#3d2a70)}
+.lvinfo h3 small{display:block;font-size:.4em;color:#a99dd4;letter-spacing:.16em;margin-bottom:.8em;text-shadow:none}
+.lvinfo p{margin:0;color:#e2dbff;font-size:clamp(14px,1.5vw,17px);text-shadow:0 1px 2px #000}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font:400 9px/1 "Press Start 2P",monospace;letter-spacing:.06em;padding:6px 8px;color:#e9e4ff;background:rgba(255,255,255,.08);border-left:3px solid var(--wc,#ffd23f)}
+.status{font:400 10px/1.4 "Press Start 2P",monospace;color:#a99dd4;letter-spacing:.08em}.status.ok{color:#5ee08a}
+/* controls */
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:clamp(10px,2vw,22px);width:min(980px,100%);text-align:left}
+.cc{padding:12px 14px;background:rgba(10,6,24,.55);border-top:3px solid var(--pc,#4a3888)}
+.cc h4{margin:0 0 10px;font:400 10px/1.4 "Press Start 2P",monospace;color:var(--pc,#fff);letter-spacing:.1em}
+.cc div{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#d6cff2;font-size:13px;padding:3px 0}
+/* online + lobby */
+.field{display:flex;flex-direction:column;align-items:center;gap:6px}
+.field label{font:400 9px/1 "Press Start 2P",monospace;color:#a99dd4;letter-spacing:.16em}
+input{font:400 clamp(13px,1.6vw,18px)/1 "Press Start 2P",monospace;color:#fff;background:rgba(10,6,24,.6);border:0;border-bottom:3px solid #4a3888;border-radius:0;padding:12px 14px 10px;width:min(320px,80vw);text-align:center;letter-spacing:.08em}
+input::placeholder{color:#5a4f86}
+input:focus,input.on{outline:none;border-bottom-color:var(--gold);background:rgba(30,18,60,.7)}
+input.code{text-transform:uppercase;letter-spacing:.4em;width:min(220px,60vw)}
+.or{font:400 9px/1 "Press Start 2P",monospace;color:#6f64a0;letter-spacing:.2em;display:flex;align-items:center;gap:14px}
+.or::before,.or::after{content:'';width:60px;height:2px;background:#3a2c6a}
+.err{color:#ff8f8f;font-size:14px;min-height:1.4em;text-shadow:0 1px 2px #000}
+.lobby{flex-direction:row;align-items:stretch;justify-content:center;gap:clamp(16px,4vw,60px);max-width:1180px;text-align:left}
+.roomc{display:flex;flex-direction:column;gap:clamp(8px,1.8vh,16px);min-width:280px;max-width:380px}
+.bigcode{font:400 clamp(30px,min(6vw,9vh),64px)/1 "Press Start 2P",monospace;color:var(--gold);letter-spacing:.18em;text-shadow:0 4px 0 #8a4a10,0 8px 0 rgba(0,0,0,.4)}
+.plist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.pl{display:flex;align-items:center;gap:8px;padding:4px 8px;min-width:0;background:rgba(10,6,24,.5);border-left:4px solid var(--pc)}
+.pl canvas{width:24px;height:32px;image-rendering:pixelated}
+.pl span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 10px/1.4 "Press Start 2P",monospace;color:#fff}.pl small{display:block;color:#a99dd4;font:12px system-ui,sans-serif}
+/* win */
+.stats{display:flex;gap:clamp(18px,4vw,48px);justify-content:center}
+.stat{display:flex;flex-direction:column;gap:8px;align-items:center}
+.stat small{font:400 9px/1 "Press Start 2P",monospace;color:#a99dd4;letter-spacing:.16em}
+.stat b{font:400 clamp(18px,2.6vw,28px)/1 "Press Start 2P",monospace;color:#fff;text-shadow:0 3px 0 #3d2a70}
+.stat b.bad{color:#ff8f8f}
+@media(max-width:760px){.lvsel,.lobby{flex-direction:column;align-items:center;overflow:auto}.lvinfo{width:100%}.hints{padding:0 10px;font-size:12px}.ver,.who{display:none}}
+@media(max-height:520px){.logo canvas{display:none}.tag{display:none}}
 </style></head><body>
 <canvas id="screen" tabindex="0" aria-label="Huddle Peak game screen"></canvas><div id="ui"></div>
-<div class="keys" id="keys">
-<span><i style="background:#e8833a"></i>P1 <kbd>A</kbd><kbd>D</kbd> move <kbd>W</kbd> jump <kbd>S</kbd> door/pass</span>
-<span><i style="background:#2ec4b6"></i>P2 <kbd>←</kbd><kbd>→</kbd> <kbd>↑</kbd> jump <kbd>↓</kbd> door/pass</span>
-<span><i style="background:#e85a8a"></i>P3 <kbd>J</kbd><kbd>L</kbd> <kbd>I</kbd> jump <kbd>K</kbd></span>
-<span><i style="background:#f2c53a"></i>P4 Numpad <kbd>4</kbd><kbd>6</kbd> <kbd>8</kbd> jump <kbd>5</kbd></span>
-<span>Gamepad: stick, <kbd>A</kbd> jump, <kbd>B</kbd> door, <kbd>Y</kbd> taunt · <kbd>T</kbd> taunt (P1) · <kbd>Esc</kbd> menu · <kbd>F</kbd> fullscreen · <kbd>G</kbd> fast graphics · <kbd>N</kbd> network info</span>
-</div>
+
 <script src="game.js"></script>
 <script src="art.js"></script>
 <script>
@@ -341,7 +395,7 @@ function hud(g){const S=g.S,kk=scr.height/VHv,k=kk*0.86,W=scr.width,Hh=scr.heigh
  if(S.restartT>0){const a=S.restartT<0.4?1-S.restartT/0.4:0;sctx.fillStyle='rgba(18,10,38,'+a+')';sctx.fillRect(0,0,W,Hh);const who='P'+(S.culprit+1),pc=PAL[Math.max(0,S.culprit)];
   const msg={red:who+' moved on red!',squash:who+' got left behind',spikes:who+' hit the spikes',lava:who+' fell in the lava',saw:who+' met the saw',crush:who+' got squished',fire:who+' got burned',fall:who+' fell'}[S.cause]||who+' messed it up';
   txt(msg,W/2,Hh*0.42,Math.round(k*5),pc.h);txt('Back to the start, everyone',W/2,Hh*0.56,Math.round(k*3),'#e9e4ff')}
- if(intro>0&&!S.restartT&&!S.won){const al=Math.min(1,intro/0.5),bw=Math.min(W*0.8,k*190),bh=k*30,bx=W/2-bw/2,by=Hh*0.30;sctx.globalAlpha=al;pill(bx,by,bw,bh,'rgba(14,8,30,.88)','#ffd23f');txt('World '+(g.theme+1)+' · '+(g.li+1)+'. '+g.name,W/2,by+bh*0.3,Math.round(k*5),'#ffd23f');txt(g.goal,W/2,by+bh*0.58,Math.round(k*2.8),'#e9e4ff');txt('Set for '+g.n+' players',W/2,by+bh*0.8,Math.round(k*2.4),'#a99dd4');sctx.globalAlpha=1}
+ if(intro>0&&!S.restartT&&!S.won&&!screen){const al=Math.min(1,intro/0.5),bw=Math.min(W*0.8,k*190),bh=k*30,bx=W/2-bw/2,by=Hh*0.30;sctx.globalAlpha=al;pill(bx,by,bw,bh,'rgba(14,8,30,.88)','#ffd23f');txt('World '+(g.theme+1)+' · '+(g.li+1)+'. '+g.name,W/2,by+bh*0.3,Math.round(k*5),'#ffd23f');txt(g.goal,W/2,by+bh*0.58,Math.round(k*2.8),'#e9e4ff');txt('Set for '+g.n+' players',W/2,by+bh*0.8,Math.round(k*2.4),'#a99dd4');sctx.globalAlpha=1}
  if(toastT>0){sctx.globalAlpha=Math.min(1,toastT/0.4);const tw=k*120;pill(W/2-tw/2,Hh-pad*2-k*12,tw,k*12,'rgba(14,8,30,.88)','#2ec4b6');txt(toast,W/2,Hh-pad*2-k*6,Math.round(k*3),'#7ff0e0');sctx.globalAlpha=1}
  if(S.won){sctx.fillStyle='rgba(18,10,38,'+Math.min(0.55,S.winT)+')';sctx.fillRect(0,0,W,Hh);if(screen!=='win'){txt('Level clear!',W/2,Hh*0.24,Math.round(k*9),'#ffd23f');txt('Time '+tm+'   Deaths '+S.deaths,W/2,Hh*0.36,Math.round(k*3.4),'#ffffff')}}}
 
@@ -349,8 +403,8 @@ function hud(g){const S=g.S,kk=scr.height/VHv,k=kk*0.86,W=scr.width,Hh=scr.heigh
 const KEYS=[{l:['KeyA'],r:['KeyD'],j:['KeyW'],d:['KeyS']},{l:['ArrowLeft'],r:['ArrowRight'],j:['ArrowUp'],d:['ArrowDown']},{l:['KeyJ'],r:['KeyL'],j:['KeyI'],d:['KeyK']},{l:['Numpad4'],r:['Numpad6'],j:['Numpad8'],d:['Numpad5','Numpad2']}];
 const BLOCK=new Set(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space','Numpad4','Numpad6','Numpad8','Numpad5','Numpad2']);
 const down=new Set(),hit=new Set(),gpPrev={};
-addEventListener('keydown',e=>{if(e.target&&e.target.tagName==='INPUT')return;if(BLOCK.has(e.code))e.preventDefault();if(!down.has(e.code))hit.add(e.code);down.add(e.code);audioInit();
- if(e.code==='Escape'&&(mode==='local'||mode==='online')&&screen!=='win'){screen==='pause'?closeUI():showPause()}
+addEventListener('keydown',e=>{const inInput=!!(e.target&&e.target.tagName==='INPUT');if(screen&&NAV&&menuKey(e,inInput))return;if(inInput)return;if(BLOCK.has(e.code))e.preventDefault();if(!down.has(e.code))hit.add(e.code);down.add(e.code);audioInit();
+ if(e.code==='Escape'&&(mode==='local'||mode==='online')&&game&&!screen)showPause();
  if(e.code==='KeyR'&&mode==='local'&&game&&!screen)startLocal(game.li);if(e.code==='KeyF'&&!e.repeat)toggleFS();if(e.code==='KeyG'&&!e.repeat)setLowQ(!LOWQ);if(e.code==='KeyN'&&!e.repeat)showNet=!showNet;if(e.code==='KeyT'&&!e.repeat&&game&&!screen){if(mode==='local'){const s=localSchemes.indexOf(0);if(s>=0)taunt(s,nextTaunt(s))}else if(mode==='online'&&net.slot>=0)send({t:'emote',i:nextTaunt(net.slot)})}});
 addEventListener('keyup',e=>down.delete(e.code));addEventListener('blur',()=>down.clear());
 scr.addEventListener('pointerdown',()=>{scr.focus();audioInit()});
@@ -358,6 +412,15 @@ function pads(){try{return navigator.getGamepads?navigator.getGamepads():[]}catc
 function readScheme(id){if(id<4){const k=KEYS[id],any=a=>a.some(c=>down.has(c)),anyH=a=>a.some(c=>hit.has(c));return{x:(any(k.r)?1:0)-(any(k.l)?1:0),j:any(k.j),jp:anyH(k.j),d:any(k.d)}}
  const gp=pads()[id-4];if(!gp)return null;const ax=gp.axes[0]||0,b=i=>!!(gp.buttons[i]&&gp.buttons[i].pressed);const j=b(0);const pv=gpPrev[id]||{};gpPrev[id]={j};
  const ty=b(3);gpPrev[id].ty=ty;return{x:(ax>0.35||b(15)?1:0)-(ax<-0.35||b(14)?1:0),j,jp:j&&!pv.j,d:b(1)||b(13)||(gp.axes[1]||0)>0.6,tp:ty&&!pv.ty}}
+const gpm={};
+function padMenu(dt){const ps=pads();for(let i=0;i<ps.length;i++){const gp=ps[i];if(!gp)continue;const b=k=>!!(gp.buttons[k]&&gp.buttons[k].pressed),ay=gp.axes[1]||0,ax=gp.axes[0]||0;
+ const now={u:b(12)||ay<-0.55,d:b(13)||ay>0.55,l:b(14)||ax<-0.55,r:b(15)||ax>0.55,a:b(0),b:b(1),s:b(9)};if(!gpm[i]){gpm[i]=Object.assign({t:0},now);continue}
+ const pv=gpm[i],E={};for(const k in now)E[k]=now[k]&&!pv[k];
+ const dir=now.u?'u':now.d?'d':now.l?'l':now.r?'r':'';let fire='';if(dir&&E[dir]){fire=dir;pv.t=0.38}else if(dir){pv.t-=dt;if(pv.t<=0){fire=dir;pv.t=0.11}}
+ Object.assign(pv,now);
+ if(screen&&NAV){if(fire==='u')navMove(-1);else if(fire==='d')navMove(1);else if(fire)navLR(fire==='l'?-1:1);
+  if(E.a)navOk();else if(E.b&&NAV.back){blip(2);NAV.back()}else if(E.s&&screen==='pause')closeUI()}
+ else if(!screen&&E.s&&(mode==='local'||mode==='online')&&game)showPause()}}
 function onlineInput(){const any=a=>a.some(c=>down.has(c));let xx=(any(['KeyD','ArrowRight'])?1:0)-(any(['KeyA','ArrowLeft'])?1:0),j=any(['KeyW','ArrowUp','Space']),d=any(['KeyS','ArrowDown']);
  const gp=pads()[0];if(gp){const ax=gp.axes[0]||0,b=i=>!!(gp.buttons[i]&&gp.buttons[i].pressed);{const ty=b(3);if(ty&&!gpPrev.oty&&!screen&&net.slot>=0)send({t:'emote',i:nextTaunt(net.slot)});gpPrev.oty=ty}if(ax>0.35||b(15))xx=1;if(ax<-0.35||b(14))xx=-1;j=j||b(0);d=d||b(1)||b(13)}return{x:xx,j,d}}
 
@@ -367,34 +430,105 @@ try{(JSON.parse(localStorage.getItem('hp-done')||'[]')).forEach(i=>done.add(i))}
 const saveDone=()=>{try{localStorage.setItem('hp-done',JSON.stringify([...done]))}catch(e){}};
 let demo=H.createGame(0),demoT=0,demoW=0;
 const WCOL=['#4a3a8a','#b8582a','#1a5a8a','#3a8ad8','#a8300e'];
-function closeUI(){ui.innerHTML='';screen='';document.body.classList.remove('menu');try{scr.focus({preventScroll:true})}catch(e){}}
-function panel(html){document.body.classList.add('menu');ui.innerHTML='<div class="panel">'+html+'</div>';return ui.firstChild}
-function levelGrid(sel,doneSet,clickable){let h='<div class="worlds">';for(let w=0;w<5;w++){h+='<div class="world"><h4 style="background:'+WCOL[w]+'">'+(w+1)+'. '+esc(H.THEMES[w])+'</h4><div class="levels">';for(let i=w*5;i<w*5+5;i++){const L=H.LEVELS[i];h+='<button class="lv'+(doneSet.has(i)?' done':'')+(sel===i?' sel':'')+'" data-lv="'+i+'"'+(clickable?'':' disabled')+'><b>'+(i+1)+(doneSet.has(i)?' ✓':'')+'</b><span>'+esc(L.name)+'</span></button>'}h+='</div></div>'}return h+'</div>'}
-function setKeys(online){document.getElementById('keys').innerHTML=online?'<span><kbd>A</kbd><kbd>D</kbd> or <kbd>←</kbd><kbd>→</kbd> move · <kbd>W</kbd> <kbd>↑</kbd> or <kbd>Space</kbd> jump · <kbd>S</kbd> or <kbd>↓</kbd> door / pass key · <kbd>T</kbd> taunt · <kbd>Esc</kbd> menu · <kbd>F</kbd> fullscreen · <kbd>G</kbd> fast graphics · <kbd>N</kbd> network info</span><span>Gamepad: stick, <kbd>A</kbd> jump, <kbd>B</kbd> door, <kbd>Y</kbd> taunt</span>':KEYHTML}
-const KEYHTML=document.getElementById('keys').innerHTML;
-function showTitle(){setKeys(false);mode='title';screen='title';const p=panel('<h2>Huddle Peak</h2><p>25 co-op levels across 5 worlds. Stack, push, hold doors and carry each other to the top. Everyone has to make it.</p><div class="row"><button id="bLocal">Play on this computer</button>'+(ONLINE_OK?'<button class="teal" id="bOnline">Play online</button>':'')+'</div>'+(ONLINE_OK?'':'<p style="font-size:13px">Online play works in the server version of this game.</p>'));
- p.querySelector('#bLocal').onclick=showLevels;if(ONLINE_OK)p.querySelector('#bOnline').onclick=showOnline}
-function showLevels(){screen='levels';const p=panel('<h2>Pick a level</h2>'+levelGrid(-1,done,true)+'<div class="row"><button class="alt" id="bBack">Back</button></div>');
- p.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>startLocal(+b.dataset.lv));p.querySelector('#bBack').onclick=()=>{mode==='local'&&game?showPause():showTitle()}}
+const VERSION='v1.5';
+let NAV=null,demoPin=-1,demoPinAt=0;
+const WCOL2=['#8a74e8','#f08a3c','#3aa6e8','#7ab8f8','#f05a2a'];
+function blip(k){audioInit();if(k===0)beep(520,0.035,'square',0.018);else if(k===1){beep(660,0.05,'square',0.026);beep(990,0.07,'square',0.022,0,0.05)}else beep(330,0.06,'square',0.022)}
+function closeUI(){ui.innerHTML='';ui.className='';screen='';NAV=null;demoPin=-1;try{scr.focus({preventScroll:true})}catch(e){}}
+const AR='<i class="ar l"></i><i class="ar r"></i>';
+const mi=(id,label,cls)=>'<button class="mi'+(cls?' '+cls:'')+'" id="'+id+'">'+AR+label+'</button>';
+const HNAV='<span><kbd>↑</kbd><kbd>↓</kbd> choose</span><span><kbd>Enter</kbd> or pad <kbd>A</kbd> select</span>';
+function navItems(){return [...ui.querySelectorAll('.mi,input')].filter(e=>!e.disabled&&e.offsetParent!==null)}
+function sel(el,quiet){if(!el)return;ui.querySelectorAll('.mi.on,input.on').forEach(e=>{if(e!==el)e.classList.remove('on')});el.classList.add('on');
+ if(el.tagName==='INPUT'){try{el.focus({preventScroll:true})}catch(e){}}else if(document.activeElement&&document.activeElement.tagName==='INPUT')document.activeElement.blur();
+ try{el.scrollIntoView({block:'nearest'})}catch(e){}if(el.onsel)el.onsel();if(!quiet)blip(0)}
+function navMove(d){const it=navItems();if(!it.length)return;let i=it.findIndex(e=>e.classList.contains('on')&&(e.matches('.mi')||e.tagName==='INPUT'));i=i<0?0:(i+d+it.length)%it.length;sel(it[i])}
+function navOk(){const el=ui.querySelector('.mi.on,input.on');if(!el)return;if(el.tagName==='INPUT'){if(el.id==='code'){const j=ui.querySelector('#bJoin');if(j)j.click()}else navMove(1)}else el.click()}
+function navLR(d){if(NAV&&NAV.lr){NAV.lr(d);return true}const on=ui.querySelector('.mi.on');if(on&&on.onlr){on.onlr(d);return true}return false}
+function menuKey(e,inInput){const c=e.code;audioInit();
+ if(c==='ArrowUp'||(!inInput&&c==='KeyW')){e.preventDefault();navMove(-1);return true}
+ if(c==='ArrowDown'||(!inInput&&c==='KeyS')){e.preventDefault();navMove(1);return true}
+ if(!inInput&&['ArrowLeft','KeyA','KeyQ','ArrowRight','KeyD','KeyE'].includes(c)){const d=['ArrowLeft','KeyA','KeyQ'].includes(c)?-1:1;if(navLR(d)){e.preventDefault();return true}return false}
+ if(c==='Enter'||(!inInput&&c==='Space')){e.preventDefault();if(!e.repeat)navOk();return true}
+ if(c==='Escape'){e.preventDefault();if(NAV.back){blip(2);NAV.back()}return true}
+ return false}
+ui.addEventListener('pointermove',e=>{const el=e.target.closest&&e.target.closest('.mi,input');if(el&&!el.disabled&&!el.classList.contains('on'))sel(el)});
+function scrn(name,html,o){o=o||{};screen=name;ui.className='s-'+name;
+ ui.innerHTML='<div class="scr'+(o.cls?' '+o.cls:'')+'">'+html+'</div><div class="hints">'+(o.hints!=null?o.hints:HNAV+(o.back?'<span><kbd>Esc</kbd> back</span>':''))+'</div>'+(o.corner||'');
+ NAV={back:o.back||null,lr:o.lr||null};const root=ui.firstChild;
+ for(const id in (o.on||{})){const el=root.querySelector('#'+id),f=o.on[id];if(el)el.onclick=()=>{blip(1);f()}}
+ if(o.init)o.init(root);const first=(o.sel&&root.querySelector(o.sel))||navItems()[0];if(first)sel(first,true);return root}
+// title: logo with the crew bouncing on top
+const crew={t:0,b:[...Array(8)].map(()=>({y:0,vy:0,bl:Math.random()*4})),sc:2,n:0};
+function drawCrew(dt){const cv=document.getElementById('crew');if(!cv)return;const W=8*27+6,Hh=48;
+ if(cv.width!==W){cv.width=W;cv.height=Hh}if(crew.n--<=0){crew.n=30;const fs=parseFloat(getComputedStyle(cv.nextElementSibling).fontSize)||60;crew.sc=Math.max(1,Math.min(3,Math.round(fs/46)))}
+ cv.style.width=W*crew.sc+'px';cv.style.height=Hh*crew.sc+'px';crew.t+=dt;const c=cv.getContext('2d');c.clearRect(0,0,W,Hh);const cyc=crew.t%6;
+ crew.b.forEach((q,i)=>{const tj=1.2+i*0.12;if(q.y>=0&&cyc>=tj&&cyc-dt<tj)q.vy=-115;q.vy+=560*dt;q.y+=q.vy*dt;if(q.y>0){q.y=0;q.vy=0}q.bl-=dt;if(q.bl<-0.13)q.bl=2+Math.random()*4;
+  const s=charSprite({slot:i,vx:0,vy:q.vy,grounded:q.y>=0&&q.vy===0,row:0,anim:0,blinkT:q.bl},crew.t);c.drawImage(s,3+i*27,Hh-32+Math.round(q.y))})}
+function showTitle(){mode='title';demoPin=-1;
+ scrn('title','<div class="logo"><canvas id="crew"></canvas><h1 aria-label="Huddle Peak"><span>HUDDLE</span><span class="l2">PEAK</span></h1><div class="tag">A CO-OP CLIMB FOR 2-8 FRIENDS</div></div><div class="menu">'+mi('bLocal','PLAY')+(ONLINE_OK?mi('bOnline','PLAY ONLINE'):'')+mi('bCtl','CONTROLS')+mi('bOpt','OPTIONS')+'</div>'+(ONLINE_OK?'':'<p class="note" style="font-size:13px">Online play needs the server version of the game.</p>'),
+ {corner:'<div class="ver">'+VERSION+'</div><div class="who">25 LEVELS / 5 WORLDS</div>',on:{bLocal:showLevels,bOnline:()=>showOnline(),bCtl:()=>showControls(showTitle),bOpt:()=>showOptions(showTitle)}})}
+// level picker (local level select and the online lobby)
+const MMC={};
+function miniMap(li){if(MMC[li])return MMC[li];const g=H.createGame(li,4),w=g.W,h=g.H,s=3,c=mk(w*s,h*s),x=c.getContext('2d'),th=g.theme;
+ const pal=[['#120e2e','#6a5ac8','#d4ccff'],['#1a0e0c','#b0602e','#ffbe80'],['#08121f','#2f6ea8','#9ad8ff'],['#0e1a30','#4f8ad8','#e0f0ff'],['#170604','#9a381a','#ffa060']][th];
+ x.fillStyle=pal[0];x.fillRect(0,0,c.width,c.height);
+ for(let y=0;y<h;y++)for(let X=0;X<w;X++){const ch=g.grid[y][X];if(ch==='.')continue;let col;
+  if(ch==='^')col=th===4?'#ffb03a':'#ff4a5a';else if(/[a-e]/.test(ch))col='rgba(127,240,224,.4)';else if(/[A-E]/.test(ch))col='#7ff0e0';else col=(y>0&&g.grid[y-1][X]==='.')?pal[2]:pal[1];
+  x.fillStyle=col;x.fillRect(X*s,y*s,s,s)}
+ const R=(o,col)=>{if(!o||o.x==null)return;x.fillStyle=col;x.fillRect(Math.round(o.x/TS*s),Math.round(o.y/TS*s),Math.max(s,Math.round((o.w||TS)/TS*s)),Math.max(2,Math.round((o.h||6)/TS*s)))};
+ (g.fireDefs||[]).forEach(o=>R(o,'rgba(255,130,40,.75)'));(g.liftDefs||[]).forEach(o=>R(o,'#d8b4ff'));(g.raftDefs||[]).forEach(o=>R(o,'#c8884a'));(g.crateDefs||[]).forEach(o=>R(o,'#c8884a'));(g.crushDefs||[]).forEach(o=>R(o,'#a8b0c8'));
+ R(g.door,'#ffd23f');if(g.keyHome){x.fillStyle='#fff6a0';x.fillRect(Math.round(g.keyHome.x/TS*s)-2,Math.round(g.keyHome.y/TS*s)-2,5,5)}
+ if(g.spawn)for(let i=0;i<3;i++){x.fillStyle=PAL[i].H;x.fillRect((g.spawn.x+1+i*1.3)*s,(g.spawn.floor-1.2)*s,s+1,s+1)}
+ const P=g.plateDefs||[],f=[];const has=a=>a&&a.length;
+ if(g.flags.dark)f.push('DARK');if(has(g.fireDefs))f.push('FIRE WALLS');if(g.flags.rope)f.push('ROPED');if(g.flags.light)f.push('RED LIGHT');if(g.flags.pass)f.push('PASS THE KEY');if(g.flags.scroll)f.push('CHASE');
+ if(P.some(p=>p.seq))f.push('IN ORDER');if(P.some(p=>p.run))f.push('TREADMILLS');if(has(g.raftDefs))f.push('RAFT');if(has(g.liftDefs))f.push('LIFTS');if(has(g.crushDefs))f.push('CRUSHERS');if(has(g.balDefs))f.push('SCALES');
+ if(has(g.fanDefs))f.push('FANS');if(has(g.sawDefs))f.push('SAWS');if(has(g.flipTiles))f.push('FLIP BLOCKS');if(has(g.crumbTiles))f.push('CRUMBLING');if(has(g.crateDefs))f.push('CRATES');if(has(g.leverDefs))f.push('LEVERS');if(P.length)f.push('PLATES');
+ return MMC[li]={c,feats:f.slice(0,6),goal:g.goal}}
+function pickerHTML(cur,doneSet,pick){const w=Math.floor(cur/5);let h='<div class="lvcol"><div class="whead"><button class="wnav pv" aria-label="Previous world"><i></i></button><div class="wname"><small>WORLD <span class="wn">'+(w+1)+'</span> / 5</small><b class="wt">'+esc(H.THEMES[w].toUpperCase())+'</b><div class="pips">'+[0,1,2,3,4].map(i=>'<i'+(i===w?' class="on"':'')+'></i>').join('')+'</div></div><button class="wnav nx" aria-label="Next world"><i></i></button></div><div class="menu lvl">';
+ for(let i=0;i<25;i++){const L=H.LEVELS[i];h+='<button class="mi'+(pick===i?' pick':'')+'" data-lv="'+i+'" data-w="'+Math.floor(i/5)+'"'+(Math.floor(i/5)!==w?' hidden':'')+'>'+AR+'<b>'+String(i+1).padStart(2,'0')+'</b>'+esc(L.name.toUpperCase())+'<i class="ck">'+(doneSet.has(i)?'✓':'')+'</i></button>'}
+ return h+'</div></div><div class="lvinfo"><canvas class="mm"></canvas><h3><small class="lvw"></small><span class="lvn"></span></h3><p class="lvg"></p><div class="chips"></div><div class="status"></div></div>'}
+function setWorld(root,w){w=(w+5)%5;const on=root.querySelector('.lvl .mi.on');const idx=on?(+on.dataset.lv)%5:0;root.dataset.w=w;
+ root.querySelectorAll('.lvl .mi').forEach(b=>b.hidden=+b.dataset.w!==w);root.querySelector('.wn').textContent=w+1;root.querySelector('.wt').textContent=H.THEMES[w].toUpperCase();
+ root.querySelectorAll('.pips i').forEach((p,i)=>p.className=i===w?'on':'');root.style.setProperty('--wc',WCOL2[w]);sel(root.querySelector('[data-lv="'+(w*5+idx)+'"]'))}
+function lvInfo(root,li,doneSet){const m=miniMap(li),cv=root.querySelector('.mm'),w=Math.floor(li/5);root.style.setProperty('--wc',WCOL2[w]);root.dataset.w=w;
+ cv.width=m.c.width;cv.height=m.c.height;cv.getContext('2d').drawImage(m.c,0,0);
+ root.querySelector('.lvw').textContent='WORLD '+(w+1)+' / LEVEL '+(li+1);root.querySelector('.lvn').textContent=H.LEVELS[li].name.toUpperCase();root.querySelector('.lvg').textContent=m.goal;
+ root.querySelector('.chips').innerHTML=m.feats.map(f=>'<span>'+f+'</span>').join('');const st=root.querySelector('.status'),ok=doneSet.has(li);st.className='status'+(ok?' ok':'');st.textContent=ok?'CLEARED':'NOT CLEARED YET';
+ demoPin=li;demoPinAt=performance.now()+220}
+function bindPicker(root,doneSet,onPick){root.querySelectorAll('[data-lv]').forEach(b=>{b.onclick=()=>{blip(1);onPick(+b.dataset.lv)};b.onsel=()=>lvInfo(root,+b.dataset.lv,doneSet)});
+ root.querySelector('.wnav.pv').onclick=()=>setWorld(root,+root.dataset.w-1);root.querySelector('.wnav.nx').onclick=()=>setWorld(root,+root.dataset.w+1)}
+function showLevels(){const back=mode==='local'&&game?showPause:showTitle;let cur=game&&mode==='local'?game.li:[...Array(25).keys()].find(i=>!done.has(i));if(cur==null)cur=0;let root;
+ root=scrn('levels',pickerHTML(cur,done,-1),{cls:'lvsel',back,lr:d=>setWorld(root,+root.dataset.w+d),hints:HNAV+'<span><kbd>←</kbd><kbd>→</kbd> world</span><span><kbd>Esc</kbd> back</span>',sel:'[data-lv="'+cur+'"]',init:r=>bindPicker(r,done,li=>startLocal(li))})}
 function startLocal(li){mode='local';game=H.createGame(li,localSchemes.filter(v=>v!=null).length);intro=3.2;parts=[];localSchemes.forEach((id,slot)=>{if(id!=null)H.addPlayer(game,slot)});game.fx.length=0;closeUI()}
-function showPause(){screen='pause';if(mode==='local'){const p=panel('<h2>Paused</h2><p>'+esc(game.goal)+'</p><div class="row"><button id="bRes">Resume</button><button class="alt" id="bRe">Restart level</button><button class="alt" id="bLv">Levels</button><button class="alt" id="bQuit">Title</button></div>');
-  p.querySelector('#bRes').onclick=closeUI;p.querySelector('#bRe').onclick=()=>startLocal(game.li);p.querySelector('#bLv').onclick=showLevels;p.querySelector('#bQuit').onclick=()=>{localSchemes=[];game=null;clearDeaths();showTitle()}}
- else{const p=panel('<h2>Paused</h2><p>The game keeps running for everyone else.</p><div class="row"><button id="bRes">Resume</button>'+(net.host?'<button class="alt" id="bRe">Restart level</button><button class="alt" id="bLob">Back to lobby</button>':'')+'<button class="alt" id="bLeave">Leave room</button></div>');
-  p.querySelector('#bRes').onclick=closeUI;if(net.host){p.querySelector('#bRe').onclick=()=>{send({t:'restart'});closeUI()};p.querySelector('#bLob').onclick=()=>send({t:'lobby'})}p.querySelector('#bLeave').onclick=leaveRoom}}
+const lvTag=g=>'WORLD '+(g.theme+1)+'  -  '+(g.li+1)+'. '+esc(g.name.toUpperCase());
+function showPause(){const loc=mode==='local',g=game;if(!g)return;
+ scrn('pause','<h2 class="big"><span>PAUSED</span></h2><p class="sub">'+lvTag(g)+'</p><p class="note">'+esc(loc?g.goal:'The game keeps running for everyone else.')+'</p><div class="menu">'+mi('bRes','RESUME')+(loc||net.host?mi('bRe','RESTART LEVEL'):'')+(loc?mi('bLv','LEVELS'):net.host?mi('bLob','BACK TO LOBBY'):'')+mi('bCtl','CONTROLS')+mi('bOpt','OPTIONS')+(loc?mi('bQuit','QUIT TO TITLE'):mi('bLeave','LEAVE ROOM'))+'</div>',
+ {back:closeUI,hints:HNAV+'<span><kbd>Esc</kbd> or <kbd>Start</kbd> resume</span>',on:{bRes:closeUI,bRe:()=>{if(loc)startLocal(g.li);else{send({t:'restart'});closeUI()}},bLv:showLevels,bLob:()=>send({t:'lobby'}),bCtl:()=>showControls(showPause),bOpt:()=>showOptions(showPause),bQuit:()=>{localSchemes=[];game=null;clearDeaths();showTitle()},bLeave:leaveRoom}})}
+function showControls(back){const K=a=>a.map(k=>'<kbd>'+k+'</kbd>').join(''),row=(a,b)=>'<div><span>'+a+'</span><span>'+b+'</span></div>';
+ const P=[[['A','D'],['W'],['S']],[['←','→'],['↑'],['↓']],[['J','L'],['I'],['K']],[['Num 4','Num 6'],['Num 8'],['Num 5']]];
+ const cards=P.map((k,i)=>'<div class="cc" style="--pc:'+PAL[i].H+'"><h4>PLAYER '+(i+1)+'</h4>'+row('Move',K(k[0]))+row('Jump',K(k[1]))+row('Door / pass key',K(k[2]))+'</div>').join('')
+  +'<div class="cc" style="--pc:#9a6af0"><h4>GAMEPADS 5-8</h4>'+row('Move','Stick / D-pad')+row('Jump',K(['A']))+row('Door / pass key',K(['B']))+row('Taunt',K(['Y']))+row('Pause',K(['Start']))+'</div>'
+  +'<div class="cc" style="--pc:#2ec4b6"><h4>ONLINE</h4>'+row('Move',K(['A','D'])+' '+K(['←','→']))+row('Jump',K(['W'])+K(['↑'])+K(['Space']))+row('Door / pass key',K(['S'])+K(['↓']))+row('Taunt',K(['T']))+'</div>'
+  +'<div class="cc" style="--pc:#ffd23f"><h4>ANYTIME</h4>'+row('Pause',K(['Esc']))+row('Restart level',K(['R']))+row('Taunt (P1)',K(['T']))+row('Fullscreen',K(['F']))+row('Fast graphics',K(['G']))+row('Network info',K(['N']))+'</div>';
+ scrn('controls','<h2 class="big"><span>CONTROLS</span></h2><p class="note">Press your jump key in a level to join. Four players fit on one keyboard; plug in gamepads for up to eight.</p><div class="ctl">'+cards+'</div><div class="menu">'+mi('bBack','BACK')+'</div>',{back,on:{bBack:back}})}
+function showOptions(back,selId){const fs=!!document.fullscreenElement;
+ const r=scrn('options','<h2 class="big"><span>OPTIONS</span></h2><div class="menu">'+mi('oG','GRAPHICS<small>'+(LOWQ?'FAST':'SHARP')+'</small>')+mi('oF','FULLSCREEN<small>'+(fs?'ON':'OFF')+'</small>')+mi('oN','NETWORK INFO<small>'+(showNet?'ON':'OFF')+'</small>')+mi('bBack','BACK')+'</div><p class="note">Fast graphics turns off glow and soft light. It switches on by itself if the game starts to stutter.</p>',
+ {back,sel:selId?'#'+selId:null,on:{oG:()=>{setLowQ(!LOWQ);showOptions(back,'oG')},oF:()=>{toggleFS();setTimeout(()=>{if(screen==='options')showOptions(back,'oF')},300)},oN:()=>{showNet=!showNet;showOptions(back,'oN')},bBack:back}});
+ ['oG','oF','oN'].forEach(id=>{const el=r.querySelector('#'+id);el.onlr=()=>el.click()})}
 const SESS={};
 function who(slot){if(mode==='online'){const q=net.players.find(o=>o.slot===slot);if(q)return q.name}return 'P'+(slot+1)+' '+PAL[slot].n}
 let lastDc={},lastLi=-1;
 function trackDeaths(g){if(!g||g===demo)return;const dc=g.S.dc||{};let reset=g.li!==lastLi;if(!reset)for(const k in lastDc)if((dc[k]||0)<lastDc[k])reset=true;if(reset)for(const k in lastDc)SESS[k]=(SESS[k]||0)+lastDc[k];lastDc=Object.assign({},dc);lastLi=g.li}
 function clearDeaths(){for(const k in SESS)delete SESS[k];lastDc={};lastLi=-1}
-function deathTally(){const S=game.S,t=Math.floor(S.t),tm=Math.floor(t/60)+':'+String(t%60).padStart(2,'0');return '<p class="wstat">Time '+tm+' · '+S.deaths+(S.deaths===1?' death':' deaths')+'</p>'}
-function showWin(){screen='win';const last=game.li>=H.LEVELS.length-1,nextW=!last&&Math.floor((game.li+1)/5)!==game.theme;
- const nextTxt=nextW?'Next world: '+H.THEMES[Math.floor((game.li+1)/5)]:'Next level';
- if(mode==='local'){done.add(game.li);saveDone();const p=panel('<h2>Level '+(game.li+1)+' clear!</h2>'+deathTally()+'<div class="row">'+(last?'<p>You reached the peak! Every level done.</p>':'<button id="bNext">'+esc(nextTxt)+'</button>')+'<button class="alt" id="bLv">Levels</button><button class="alt" id="bRe">Play again</button></div>');
-  if(!last)p.querySelector('#bNext').onclick=()=>startLocal(game.li+1);p.querySelector('#bLv').onclick=showLevels;p.querySelector('#bRe').onclick=()=>startLocal(game.li)}
- else{const p=panel('<h2>Level '+(game.li+1)+' clear!</h2>'+deathTally()+(net.host?'<div class="row">'+(last?'':'<button id="bNext">'+esc(nextTxt)+'</button>')+'<button class="alt" id="bLob">Back to lobby</button></div>':'<p>Waiting for the host to pick what\'s next…</p>'));
-  if(net.host){if(!last)p.querySelector('#bNext').onclick=()=>send({t:'start',level:game.li+1});p.querySelector('#bLob').onclick=()=>send({t:'lobby'})}}
- }
-
+function showWin(){const g=game,S=g.S,last=g.li>=H.LEVELS.length-1,nextW=!last&&Math.floor((g.li+1)/5)!==g.theme;
+ const t=Math.floor(S.t),tm=Math.floor(t/60)+':'+String(t%60).padStart(2,'0'),dc=S.dc||{};let wk=-1,wv=0;for(const k in dc)if(dc[k]>wv){wv=dc[k];wk=+k}
+ const head='<h2 class="big"><span>'+(last?'YOU MADE IT!':'LEVEL CLEAR!')+'</span></h2><p class="sub">'+lvTag(g)+'</p><div class="stats"><div class="stat"><small>TIME</small><b>'+tm+'</b></div><div class="stat"><small>DEATHS</small><b'+(S.deaths?' class="bad"':'')+'>'+S.deaths+'</b></div>'
+  +(wk>=0?'<div class="stat"><small>MOST DEATHS</small><b style="color:'+PAL[wk].h+';font-size:.62em;line-height:1.6">'+esc(who(wk).toUpperCase())+' x'+wv+'</b></div>':'')+'</div>'
+  +(last?'<p class="note">You reached the peak. Every level done!</p>':nextW?'<p class="note">Next up: world '+(Math.floor((g.li+1)/5)+1)+', '+esc(H.THEMES[Math.floor((g.li+1)/5)])+'</p>':'');
+ const nx=nextW?'NEXT WORLD':'NEXT LEVEL';
+ if(mode==='local'){done.add(g.li);saveDone();scrn('win',head+'<div class="menu">'+(last?'':mi('bNext',nx))+mi('bRe','PLAY AGAIN')+mi('bLv','LEVELS')+'</div>',{on:{bNext:()=>startLocal(g.li+1),bRe:()=>startLocal(g.li),bLv:showLevels}})}
+ else scrn('win',head+(net.host?'<div class="menu">'+(last?'':mi('bNext',nx))+mi('bLob','BACK TO LOBBY')+'</div>':'<p class="note">Waiting for the host to pick what\'s next…</p>'),{hints:net.host?null:'',on:{bNext:()=>send({t:'start',level:g.li+1}),bLob:()=>send({t:'lobby'})}})}
 // ---------- online ----------
 const net={rtt:0,iv:33,jit:5,delay:70,lastAt:0,bytes:0,ups:0,upsN:0,upsT:0,ws:null,code:'',slot:-1,host:false,players:[],state:'',level:0,done:new Set(),snaps:[],lastIn:''};
 // Client-side prediction: your own climber moves instantly; the server's answer corrects it smoothly.
@@ -410,12 +544,11 @@ function reconcile(d){const sp=d.P.find(p=>p.slot===net.slot);if(!sp||sp.dead||s
  if(me.dead){pr.p=null;pr.world=null;return}
  pr.p=me;pr.world=W;if(old){pr.off.x=old.x-me.x;pr.off.y=old.y-me.y;if(Math.hypot(pr.off.x,pr.off.y)>40)pr.off.x=pr.off.y=0}}
 function send(o){if(net.ws&&net.ws.readyState===1)net.ws.send(JSON.stringify(o))}
-function showOnline(err){mode='online-menu';screen='online';let nm='';try{nm=localStorage.getItem('hp-name')||''}catch(e){}
- const p=panel('<h2>Play online</h2><input id="nm" maxlength="12" placeholder="Your name" value="'+esc(nm)+'" aria-label="Your name"><div class="row"><button id="bCreate">Create a room</button></div><p>or join a friend</p><div class="row"><input id="code" class="code" maxlength="4" placeholder="CODE" aria-label="Room code"><button class="teal" id="bJoin">Join</button></div><div class="err" id="err">'+esc(err||'')+'</div><div class="row"><button class="alt" id="bBack">Back</button></div>');
- const nameOf=()=>{const v=p.querySelector('#nm').value.trim().slice(0,12)||'Climber';try{localStorage.setItem('hp-name',v)}catch(e){}return v};
- p.querySelector('#bCreate').onclick=()=>connect({t:'create',name:nameOf()});
- p.querySelector('#bJoin').onclick=()=>{const c=p.querySelector('#code').value.trim().toUpperCase();if(c.length!==4){p.querySelector('#err').textContent='Enter the 4-letter room code';return}connect({t:'join',code:c,name:nameOf()})};
- p.querySelector('#code').oninput=()=>p.querySelector('#err').textContent='';p.querySelector('#bBack').onclick=showTitle}
+function showOnline(err){mode='online-menu';demoPin=-1;let nm='';try{nm=localStorage.getItem('hp-name')||''}catch(e){}
+ const nameOf=()=>{const v=ui.querySelector('#nm').value.trim().slice(0,12)||'Climber';try{localStorage.setItem('hp-name',v)}catch(e){}return v};
+ const r=scrn('online','<h2 class="big"><span>PLAY ONLINE</span></h2><div class="field"><label for="nm">YOUR NAME</label><input id="nm" maxlength="12" placeholder="CLIMBER" value="'+esc(nm)+'" autocomplete="off" spellcheck="false"></div><div class="menu">'+mi('bCreate','CREATE A ROOM')+'</div><div class="or">OR JOIN A FRIEND</div><div class="field"><label for="code">ROOM CODE</label><input id="code" class="code" maxlength="4" placeholder="ABCD" autocomplete="off" spellcheck="false"></div><div class="menu">'+mi('bJoin','JOIN ROOM')+'</div><div class="err" id="err">'+esc(err||'')+'</div><div class="menu">'+mi('bBack','BACK','sm')+'</div>',
+ {back:showTitle,sel:'#bCreate',on:{bCreate:()=>connect({t:'create',name:nameOf()}),bJoin:()=>{const c=ui.querySelector('#code').value.trim().toUpperCase();if(c.length!==4){ui.querySelector('#err').textContent='Enter the 4-letter room code';sel(ui.querySelector('#code'),true);return}connect({t:'join',code:c,name:nameOf()})},bBack:showTitle}});
+ r.querySelector('#code').oninput=()=>r.querySelector('#err').textContent=''}
 function connect(first){if(net.ws){try{net.ws.close()}catch(e){}}
  let ws;try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws')}catch(e){const el=document.getElementById('err');if(el)el.textContent='Could not reach the server';return}net.ws=ws;
  ws.onopen=()=>ws.send(JSON.stringify(first));
@@ -432,11 +565,13 @@ function onMsg(m){
  if(m.t==='s'){const d=H.unpackSnap(m.d);{const now=performance.now();if(net.lastAt){const dt_=now-net.lastAt;net.iv=net.iv*0.9+dt_*0.1;net.jit=net.jit*0.9+Math.abs(dt_-net.iv)*0.1;net.delay=clamp(net.iv+net.jit*2.5+10,50,220)}net.lastAt=now;net.upsN++}if(!game||game.li!==d.li||game.n!==d.n||mode!=='online'){mode='online';const fresh=!game||game.li!==d.li;game=H.createGame(d.li,d.n);game.players=[];parts=[];net.snaps=[];pr.p=null;pr.world=null;pr.log.length=0;if(fresh)intro=3.2;if(screen==='lobby'||screen==='win')closeUI()}
   handleFx(d.fx||[],game);net.snaps.push({at:performance.now(),d});if(net.snaps.length>12)net.snaps.shift();reconcile(d);
   if(d.S.won&&screen!=='win'&&screen!=='pause'&&d.S.winT>0.6)showWin();if(!d.S.won&&screen==='win')closeUI()}}
-function showLobby(){setKeys(true);screen='lobby';const L=H.LEVELS[net.level];const p=panel('<h3>Room code</h3><div class="bigcode">'+esc(net.code)+'</div><p>Friends open this page, choose Play online, and enter the code.</p><div class="plist">'+net.players.map(q=>'<div class="pl"><i style="background:'+PAL[q.slot].H+'"></i><div>'+esc(q.name)+(q.slot===net.slot?' <small>(you)</small>':'')+'<br><small>'+PAL[q.slot].n+(q.host?' · host':'')+'</small></div></div>').join('')+'</div>'
-  +'<div class="row">'+(net.host?'<button id="bStart">Start '+(net.level+1)+': '+esc(L.name)+'</button>':'<p>Level '+(net.level+1)+': '+esc(L.name)+'. Waiting for the host to start…</p>')+'<button class="alt" id="bLeave">Leave</button></div>'
-  +(net.host?'<h3>Pick a level</h3>':'')+levelGrid(net.level,net.done,net.host));
- if(net.host){p.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>send({t:'pick',level:+b.dataset.lv}));p.querySelector('#bStart').onclick=()=>send({t:'start',level:net.level})}
- p.querySelector('#bLeave').onclick=leaveRoom}
+function showLobby(){const L=H.LEVELS[net.level];let root;
+ const left='<div class="roomc"><p class="sub">ROOM CODE</p><div class="bigcode">'+esc(net.code)+'</div><p class="note">Friends open this page, pick Play online and type the code. Up to 8 can join.</p><div class="plist">'+net.players.map(q=>'<div class="pl" style="--pc:'+PAL[q.slot].H+'"><canvas data-slot="'+q.slot+'" width="24" height="32"></canvas><div><span>'+esc(q.name)+'</span><small>'+PAL[q.slot].n+(q.slot===net.slot?' · you':'')+(q.host?' · host':'')+'</small></div></div>').join('')+'</div>'
+  +'<div class="menu" style="align-items:flex-start">'+(net.host?mi('bStart','START LEVEL '+(net.level+1)):'<p class="note">Level '+(net.level+1)+': '+esc(L.name)+'. Waiting for the host to start…</p>')+mi('bLeave','LEAVE ROOM','sm')+'</div></div>';
+ root=scrn('lobby',left+pickerHTML(net.level,net.done,net.level),{cls:'lobby',lr:d=>setWorld(root,+root.dataset.w+d),sel:net.host?'#bStart':'#bLeave',
+  hints:HNAV+'<span><kbd>←</kbd><kbd>→</kbd> world</span>'+(net.host?'<span>Pick a level, then Start</span>':''),
+  init:r=>{bindPicker(r,net.done,li=>{if(net.host)send({t:'pick',level:li})});lvInfo(r,net.level,net.done);r.querySelectorAll('.pl canvas').forEach(c=>c.getContext('2d').drawImage(charSprite({slot:+c.dataset.slot,vx:0,vy:0,grounded:true,row:0,anim:0,blinkT:3},0.3),0,0))},
+  on:{bStart:()=>send({t:'start',level:net.level}),bLeave:leaveRoom}})}
 let camC=null;
 function clientCam(g,dt){const S=g.S,key=g.li+'-'+g.n;if(!camC||camC.key!==key||S.restartT>0){camC={key,cam:S.cam,camY:S.camY||0,zoom:S.zoom||1,zl:null,zHold:0,gy:{},snap:true}}
  S.cam=camC.cam;S.camY=camC.camY;S.zoom=camC.zoom;S.zl=camC.zl;S.zHold=camC.zHold;S.camGY=camC.gy;const t=S.t;H.camera(g,Math.min(dt,0.05),camC.snap);S.t=t;camC.snap=false;camC.cam=S.cam;camC.camY=S.camY;camC.zoom=S.zoom;camC.zl=S.zl;camC.zHold=S.zHold;camC.gy=S.camGY}
@@ -477,7 +612,9 @@ function frame(now){const dt=Math.min(0.1,(now-last)/1000);last=now;TT+=dt;
   if(!pr.last||inp.x!==pr.last.x||inp.j!==pr.last.j||inp.d!==pr.last.d){pr.q++;pr.k=0;if(inp.j&&!(pr.last&&pr.last.j))pr.jp=true;if(inp.d&&!(pr.last&&pr.last.d))pr.dp=true;pr.last=inp;send({t:'in',x:inp.x,j:inp.j,d:inp.d,q:pr.q})}
   pr.acc+=dt;let ns=0;while(pr.acc>=H.STEP&&ns<14){const e={q:pr.q,k:pr.k++,x:inp.x,j:inp.j,jp:pr.jp,d:inp.d,dp:pr.dp};pr.jp=pr.dp=false;pr.log.push(e);if(pr.log.length>720)pr.log.shift();if(pr.p&&pr.world)simEntry(pr.world,pr.p,e);pr.acc-=H.STEP;ns++}if(ns>=14)pr.acc=0;
   const dec=Math.exp(-dt*10);pr.off.x*=dec;pr.off.y*=dec;interp();clientCam(game,dt)}
+ else if(demoPin>=0){if(demo.li!==demoPin&&performance.now()>=demoPinAt){demo=H.createGame(demoPin);demoT=0}demoT+=dt;g=demo;demo.S.t+=dt;demo.S.cam=(0.5-0.5*Math.cos(demoT*0.16))*Math.max(0,demo.LW-VWv)}
  else{demoT+=dt;if(demoT>9){demoT=0;demoW=(demoW+1)%5;demo=H.createGame(demoW*5+(demoW===0?0:1))}g=demo;demo.S.t+=dt;demo.S.cam=(Math.sin(demoT*0.12-1.2)*0.5+0.5)*Math.min(demo.LW-VW,700)}
+ padMenu(dt);if(screen==='title')drawCrew(dt);
  fpsEMA=fpsEMA*0.95+(dt>0?1/dt:60)*0.05;if(!LOWQ&&g!==demo){slowF=fpsEMA<42?slowF+dt:0;if(slowF>3)setLowQ(true,'Switched to fast graphics to keep things smooth (G to change)')}
  const d0=performance.now();draw(g,dt);const dd=performance.now()-d0;drawEMA=drawEMA*0.95+dd*0.05;if(!LOWQ){slowN=drawEMA>13?slowN+1:0;if(slowN>120)setLowQ(true,'Switched to fast graphics to keep things smooth (G to change)')}hit.clear();requestAnimationFrame(frame)}
 showTitle();requestAnimationFrame(frame);
