@@ -121,8 +121,12 @@ function shard(pb, cx, gy, h, w, lean, C) { // crystal: C = [light, mid, dark, t
 // ---------- backgrounds ----------
 const BG = {};
 function layer() { return PB(TW, TH, true); }
+// Worlds 6-10 reuse the five painted backdrops under a tint of their own.
+const TINT = { 5: ['#6ad0ff', 0.30], 6: ['#4a1a7a', 0.45], 7: ['#ff4ab8', 0.26], 8: ['#1e2840', 0.48], 9: ['#ff3010', 0.30] };
+function tinted(cv, c, a) { const o = document.createElement('canvas'); o.width = cv.width; o.height = cv.height; const x = o.getContext('2d'); x.drawImage(cv, 0, 0); x.globalCompositeOperation = 'source-atop'; x.globalAlpha = a; x.fillStyle = c; x.fillRect(0, 0, o.width, o.height); return o; }
 function buildBG(th) {
   if (BG[th]) return BG[th];
+  if (th >= 5) { const b = buildBG(th % 5), [c, a] = TINT[th] || TINT[5]; return BG[th] = { sky: tinted(b.sky, c, a), top: mixh(b.top, c, a), layers: b.layers.map(l => ({ c: tinted(l.c, c, a), f: l.f })), weather: b.weather, vf: b.vf }; }
   const sky = PB(TW, TH, true), L = []; let weather = 'snow', vf = 0.5, top;
   const add = (pb, f) => L.push({ pb, f });
   if (th === 0) { // Snowpeak: twilight alpine

@@ -4,11 +4,12 @@
 const TS = 10, VW = 320, VH = 180, ROWS = 18, STEP = 1 / 120;
 const G = 900, JUMP = 244, SPEED = 78, MAXFALL = 320, SPRING = 400, ROPE = 56, CRATE_SPEED = 24, BELT = 40, RAFT = 40;
 const PW = 10, PH = 14, JUMP_RISE = 38; // a normal jump peaks about 33 units up
-const THEMES = ['Snowpeak', 'Autumn Woods', 'Crystal Caves', 'Sky Ruins', 'Ember Forge'];
+const THEMES = ['Snowpeak', 'Autumn Woods', 'Crystal Caves', 'Sky Ruins', 'Ember Forge', 'Frostbite Summit', 'Haunted Hollow', 'Glimmer Depths', 'Thunder Spires', 'Molten Core'];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const approach = (v, t, d) => v < t ? Math.min(t, v + d) : Math.max(t, v - d);
 const ov = (a, b) => a.x < b.x + b.w - 1e-6 && a.x + a.w > b.x + 1e-6 && a.y < b.y + b.h - 1e-6 && a.y + a.h > b.y + 1e-6;
-const MAXP = 8, SEQ_GAP = 1.25, SLIME_BOUNCE = 330, KEYRUN = 96, LEAN = 22, LEANMAX = 56; // numbered switches: seconds allowed between presses
+const MAXP = 8, SEQ_GAP = 1.25, SLIME_BOUNCE = 330, KEYRUN = 96, LEAN = 22, LEANMAX = 56, FUSE = 2.6;
+const CANNON_FAR = [300, -280], CANNON_NEAR = [-25, -380]; // numbered switches: seconds allowed between presses
 const SH = n => n >= 3 ? 5 : 4; // wall height that needs everyone stacked: 2 players reach 4 tiles, 3 players reach 5
 
 // ---------- level builder ----------
@@ -132,6 +133,105 @@ function roomUp(L, x, F, n) {
   L.f(x + 8, F - h, L.w - 1, F - 1);
   L.h(x + 7, F - h - 4, h > 1 ? 'Heavy key: pass it up a stack of friends' : 'Heavy key: pass it up to a friend', 'x:' + (x + 11));
   return { x: x + 10, F: F - h };
+}
+
+// ---------- rooms for worlds 6-10 ----------
+// The key (or the second key) on a ledge that needs the whole team stacked.
+function roomKey(L, x, F, n, t) {
+  const s = Math.min(SH(n), F - 2), k2 = t === 'key2';
+  (L.rooms = L.rooms || []).push({ t: k2 ? 'key2' : 'key', x, F, s });
+  L.f(x + 2, F - s, x + 6, F - s).e({ t: k2 ? 'key2' : 'key', x: x + 4, floor: F - s });
+  L.h(x + 4, F - s - 3, k2 ? 'Second key! Stack for it' : 'Stack for the key', k2 ? 'key2' : 'key');
+  return x + 9;
+}
+// The key runs along open ground: two players trap it.
+function roomRunKey(L, x, F) {
+  (L.rooms = L.rooms || []).push({ t: 'runkey', x, F });
+  L.e({ t: 'key', x: x + 10, floor: F, run: [x + 2, x + 18] }).h(x + 10, F - 5, 'The key runs! Trap it between two of you', 'key');
+  return x + 21;
+}
+// Seesaw catapult: someone jumps from the pillar onto one end, launching whoever stands on the other end up the cliff.
+// They pull the lever up there and a staircase appears for everyone else. The floor carries on up the cliff.
+function roomSeesaw(L, x, F, n, sig) {
+  (L.rooms = L.rooms || []).push({ t: 'seesaw', x, F, sig });
+  L.f(x + 1, F - 2, x + 1, F - 1).f(x + 2, F - 4, x + 3, F - 1).e({ t: 'seesaw', x: x + 4, floor: F });
+  L.f(x + 11, F - 8, L.w - 1, F - 1).e({ t: 'lever', x: x + 13, floor: F - 8, sig });
+  [5, 6, 7, 7, 7, 7, 7].forEach((h, i) => L.f(x + 4 + i, F - h, x + 4 + i, F - 1, sig)); // stairs from the pillar up to the cliff
+  L.h(x + 6, F - 6, 'Jump from the pillar onto one end to launch whoever stands on the other', sig);
+  return { x: x + 16, F: F - 8 };
+}
+// A lift up a cliff that only moves with everyone aboard.
+function roomLift(L, x, F, n, h) {
+  h = h || 6; const lw = Math.max(5, n + 1);
+  (L.rooms = L.rooms || []).push({ t: 'lift', x, F, h, lw });
+  L.f(x + 1, F, x + lw, F + 1, '.').f(x + 1, F + 1, x + lw, F + 1, '^');
+  L.e({ t: 'lift', x: x + 1, y: F, w: lw, x2: x + 1, y2: F - h, need: 'all', spd: 34 });
+  L.f(x + lw + 1, F - h, L.w - 1, F - 1).h(x + 1 + lw / 2, F - 4, 'Everyone on the lift!', 'x:' + (x + lw + 3));
+  return { x: x + lw + 4, F: F - h };
+}
+// A wall the whole team stacks to climb; the first one up pulls the lever for stairs.
+function roomClimb(L, x, F, n, sig) {
+  const s = Math.min(SH(n), F - 3);
+  (L.rooms = L.rooms || []).push({ t: 'climb', x, F, s, sig });
+  L.f(x + 4, F - s, L.w - 1, F - 1).st(x + 5 - s, F, s - 1, sig).e({ t: 'lever', x: x + 6, floor: F - s, sig });
+  L.h(x + 2, F - s - 2, stackHint(s), sig);
+  return { x: x + 9, F: F - s };
+}
+// Melting ice: floes over spikes melt faster the more people stand on them. Spread out and keep moving.
+function roomMelt(L, x, F) {
+  (L.rooms = L.rooms || []).push({ t: 'melt', x, F });
+  L.f(x + 2, F, x + 19, F + 2, '.').f(x + 2, F + 2, x + 19, F + 2, '^');
+  for (const k of [3, 7, 11, 15]) L.e({ t: 'melt', x: x + k, floor: F, w: 2 });
+  L.h(x + 10, F - 5, 'Ice melts under weight. Spread out and keep moving!', 'x:' + (x + 21));
+  return x + 22;
+}
+// Searchlight: anyone moving in the beam is caught. Freeze, or hide under the awnings.
+function roomSearch(L, x, F) {
+  (L.rooms = L.rooms || []).push({ t: 'search', x, F });
+  L.f(x + 9, F - 3, x + 11, F - 3).f(x + 19, F - 3, x + 21, F - 3);
+  L.e({ t: 'search', x: x + 1, x2: x + 30, floor: F, spd: 36 });
+  L.h(x + 5, F - 6, "Freeze when the light is on you, or hide under cover", 'x:' + (x + 31));
+  return x + 31;
+}
+// Bomb relay: the fuse is too short to carry the bomb to the cracked wall alone. Pass it along the line.
+function roomBomb(L, x, F) {
+  (L.rooms = L.rooms || []).push({ t: 'bomb', x, F });
+  L.e({ t: 'bombs', x: x + 1, floor: F }).f(x + 12, F - 1, x + 12, F - 1).f(x + 22, F - 1, x + 22, F - 1);
+  L.f(x + 32, 0, x + 33, F - 4).f(x + 32, F - 3, x + 33, F - 1, '&');
+  L.h(x + 7, F - 5, 'Short fuse! Pass the bomb along (down next to a friend)', 'x:' + (x + 34));
+  return x + 35;
+}
+// Cannon: down to climb in. Someone holds the button to aim it across the pit; the lever over there locks the aim.
+function roomCannon(L, x, F, n, sig) {
+  (L.rooms = L.rooms || []).push({ t: 'cannon', x, F, sig });
+  L.e({ t: 'plate', x, floor: F, sig }).e({ t: 'cannon', x: x + 3, floor: F, sig });
+  L.f(x + 6, F, x + 20, F + 2, '.').f(x + 6, F + 2, x + 20, F + 2, '^').e({ t: 'lever', x: x + 24, floor: F, sig });
+  L.h(x + 3, F - 5, 'Hold the button to aim. Press down in the cannon to fire!', 'x:' + (x + 22)).h(x + 24, F - 3, 'Lock the aim for the last one', sig);
+  return x + 27;
+}
+const ROOM = {
+  gate: (L, x, F, n, a) => roomGate(L, x, F, a), crate: (L, x, F) => roomCrate(L, x, F), buttons: (L, x, F, n, a) => roomButtons(L, x, F, n, SH(n), a),
+  fire: (L, x, F, n, a) => roomFire(L, x, F, SH(n), a), order: (L, x, F, n, a) => roomOrder(L, x, F, n, a), run: (L, x, F, n, a) => roomRun(L, x, F, a),
+  pin: (L, x, F, n) => roomPin(L, x, F, n), slime: (L, x, F, n, a) => roomSlime(L, x, F, a), tilt: (L, x, F, n) => roomTilt(L, x, F, n), up: (L, x, F, n) => roomUp(L, x, F, n),
+  key: (L, x, F, n) => roomKey(L, x, F, n), key2: (L, x, F, n) => roomKey(L, x, F, n, 'key2'), runkey: (L, x, F) => roomRunKey(L, x, F),
+  seesaw: roomSeesaw, lift: roomLift, climb: roomClimb, melt: (L, x, F) => roomMelt(L, x, F), search: (L, x, F) => roomSearch(L, x, F), bomb: (L, x, F) => roomBomb(L, x, F), cannon: roomCannon };
+const RISE = { seesaw: () => 8, lift: (n, a) => a || 6, climb: n => SH(n), up: n => n >= 3 ? 2 : 1 };
+// Build a level as a run of rooms along the ground. Rooms that climb raise the floor for the rest of the level.
+function chain(n, rooms, o) {
+  o = o || {};
+  const rise = rooms.reduce((a, r) => a + (RISE[r[0]] ? RISE[r[0]](n, r[1]) : 0), 0), rows = Math.max(ROWS, rise + 16), F0 = rows - 3;
+  const L = B(rooms.length * 40 + 60, rows); L.gr(0, L.w - 1, F0); S0(L, 2, F0);
+  let x = 10, F = F0;
+  for (const r of rooms) { const res = ROOM[r[0]](L, x, F, n, r[1]); if (typeof res === 'object') { x = res.x + 1; F = res.F; } else x = res + 1; }
+  L.e({ t: 'door', x: x + 3, floor: F });
+  const W = x + 12; for (const row of L.g) row.length = W; L.w = W;
+  Object.assign(L.flags, o.flags || {});
+  const floorAt = c => { for (let y = 1; y < rows; y++) if (L.g[y][c] === '#' && L.g[y - 1][c] === '.') return y; return -1; };
+  if (o.dark) for (let c = 4; c < W - 2; c += 11) { const f = floorAt(c); if (f > 0) L.e({ t: 'torch', x: c, floor: f }); }
+  if (o.light) { L.flags.light = { g: 3.6, y: 1.0, r: 2.2 }; for (let c = 6; c < W - 4; c += 40) { const f = floorAt(c); if (f > 0) L.e({ t: 'light', x: c, floor: f }); } }
+  if (o.rise) L.flags.rise = { delay: o.rise.delay || 8, spd: o.rise.spd || 2, from: rows * TS, top: (F + 1) * TS };
+  for (const [hx, hy, t] of o.hints || []) L.h(hx, hy, t, 'x:' + (hx + 12));
+  return L;
 }
 
 // Add teamwork rooms before a level's exit: the level gets wider, the ground at the door's height carries on, and the door moves to the end.
@@ -353,8 +453,39 @@ const LEVELS = [
    L.e({ t: 'key', x: end + 8, floor: 15 - s }).e({ t: 'door', x: end + 18, floor: 15 });
    return L.h(6, 8, stackHint(s), 'a').h(13, U - 3.5, 'Pull it for the others', 'a').h(72 + o, 5.5, 'Lift: exactly ' + exactN(n) + ' at a time', 'x:' + (76 + o))
     .h(87 + o, 1.6, 'Time the crushers', 'x:' + (100 + o)).h(112 + o, 5, 'Drop on, then all push the same way', 'x:' + (137 + o)).h(end + 8, 15 - s - 3, 'Stack for the key', 'key'); } },
+
+ // ===== World 6: Frostbite Summit (seesaw catapults, melting ice) =====
+ { name: 'Catapult', goal: 'Jump onto one end of the seesaw to launch a friend', build: n => chain(n, [['seesaw', 'a'], ['key'], ['gate', 'b']]) },
+ { name: 'Melting point', goal: 'Ice melts under weight. Never crowd one floe', build: n => chain(n, [['melt'], ['key'], ['melt'], ['fire', 'a']]) },
+ { name: 'See and saw', goal: 'Climb, launch, then cross the thaw', build: n => chain(n, [['climb', 'a'], ['seesaw', 'b'], ['melt'], ['key'], ['gate', 'c']]) },
+ { name: 'Cold feet', goal: 'Slippery chases and thin floes', build: n => chain(n, [['melt'], ['seesaw', 'a'], ['runkey'], ['melt'], ['buttons', 'b']]) },
+ { name: 'Frostbite', goal: 'Every trick on the summit', build: n => chain(n, [['seesaw', 'a'], ['melt'], ['pin'], ['key'], ['seesaw', 'b'], ['order', 'c']]) },
+ // ===== World 7: Haunted Hollow (searchlights, twin keys) =====
+ { name: 'Spotlight', goal: "Move in the light and you're caught", build: n => chain(n, [['search'], ['key'], ['search'], ['gate', 'a']]) },
+ { name: 'Two of a kind', goal: 'Two keys, two carriers, one door', build: n => chain(n, [['key'], ['gate', 'a'], ['key2'], ['crate']]) },
+ { name: 'Night watch', goal: 'Lights in the dark, and two keys', build: n => chain(n, [['search'], ['key'], ['slime', 'a'], ['key2'], ['search']], { dark: true }) },
+ { name: 'Hide and seek', goal: 'Sneak past the lights, chase the key', build: n => chain(n, [['search'], ['pin'], ['search'], ['runkey'], ['fire', 'a']]) },
+ { name: 'Haunted house', goal: 'Two keys behind the watchful lights', build: n => chain(n, [['key2'], ['search'], ['seesaw', 'a'], ['key'], ['search'], ['buttons', 'b']], { dark: true }) },
+ // ===== World 8: Glimmer Depths (bomb relays) =====
+ { name: 'Hot potato', goal: 'Pass the bomb before it blows', build: n => chain(n, [['bomb'], ['key'], ['gate', 'a']]) },
+ { name: 'Blast zone', goal: 'Two walls, two relays', build: n => chain(n, [['crate'], ['bomb'], ['key'], ['bomb'], ['fire', 'a']]) },
+ { name: 'Fuse box', goal: 'Count it out, then light it up', build: n => chain(n, [['order', 'a'], ['bomb'], ['runkey'], ['bomb']]) },
+ { name: 'Deep charge', goal: 'Bombs in the dark', build: n => chain(n, [['bomb'], ['key'], ['search'], ['bomb'], ['gate', 'a']], { dark: true }) },
+ { name: 'Chain reaction', goal: 'Blast, launch, and carry two keys home', build: n => chain(n, [['bomb'], ['key2'], ['seesaw', 'a'], ['bomb'], ['key'], ['gate', 'b']]) },
+ // ===== World 9: Thunder Spires (cannons) =====
+ { name: 'Fire away', goal: 'Someone aims, everyone flies', build: n => chain(n, [['cannon', 'a'], ['key'], ['gate', 'b']]) },
+ { name: 'Aim for me', goal: 'Cannons and a searchlight', build: n => chain(n, [['cannon', 'a'], ['search'], ['key'], ['cannon', 'b']]) },
+ { name: 'Sky cannon', goal: 'Lean across, then blast off', build: n => chain(n, [['tilt'], ['cannon', 'a'], ['key'], ['cannon', 'b']]) },
+ { name: 'Storm front', goal: 'Cannons on a red light', build: n => chain(n, [['cannon', 'a'], ['key'], ['seesaw', 'b'], ['cannon', 'c']], { light: true }) },
+ { name: 'Human cannonball', goal: 'Bombs, cannons and two keys', build: n => chain(n, [['bomb'], ['cannon', 'a'], ['key2'], ['cannon', 'b'], ['key'], ['melt']]) },
+ // ===== World 10: Molten Core (rising lava) =====
+ { name: 'Rising heat', goal: 'The lava is coming up. So are you', build: n => chain(n, [['climb', 'a'], ['key'], ['lift', 6], ['climb', 'b']], { rise: { delay: 11, spd: 1.6 } }) },
+ { name: 'Hot seat', goal: 'Launch up before the lava does', build: n => chain(n, [['seesaw', 'a'], ['key'], ['climb', 'b'], ['lift', 6]], { rise: { delay: 11, spd: 1.8 } }) },
+ { name: 'Magma chamber', goal: 'Fire across, ride up, keep climbing', build: n => chain(n, [['climb', 'a'], ['cannon', 'b'], ['lift', 6], ['key'], ['seesaw', 'c']], { rise: { delay: 11, spd: 1.8 } }) },
+ { name: 'Meltdown', goal: 'Blast through while the floor floods', build: n => chain(n, [['lift', 5], ['bomb'], ['climb', 'a'], ['runkey'], ['seesaw', 'b']], { rise: { delay: 11, spd: 2 } }) },
+ { name: 'The core', goal: 'One last climb out of the fire', build: n => chain(n, [['climb', 'a'], ['seesaw', 'b'], ['key2'], ['lift', 6], ['bomb'], ['key'], ['cannon', 'c'], ['climb', 'd']], { rise: { delay: 12, spd: 1.8 } }) },
 ];
-LEVELS.forEach((L, i) => { L.theme = Math.floor(i / 5); });
+LEVELS.forEach((L, i) => { L.world = Math.floor(i / 5); L.theme = L.world % 5; });
 // Extra teamwork rooms added before each level's exit (rope levels get crates: a short rope can't stretch across a held gate).
 const MORE = {
   0: () => [['fire', 'c']], 1: () => [['fire', 'c'], ['order', 'd']], 2: () => [['pin'], ['fire', 'd']], 3: () => [['slime', 'c'], ['fire', 'b']], 4: () => [['run', 'c'], ['fire', 'd']],
@@ -372,7 +503,7 @@ function createGame(li, n) {
 }
 function compile(g, n) {
   const def = LEVELS[g.li], L = def.build(n); if (MORE[g.li]) extendEnd(L, n, MORE[g.li](n));
-  Object.assign(g, { n, name: def.name, goal: def.goal, theme: def.theme, W: L.w, H: L.rows, LW: L.w * TS, LH: L.rows * TS, grid: L.g, hints: L.hints, flags: L.flags, rooms: L.rooms || [] });
+  Object.assign(g, { n, name: def.name, goal: def.goal, theme: def.theme, world: def.world, W: L.w, H: L.rows, LW: L.w * TS, LH: L.rows * TS, grid: L.g, hints: L.hints, flags: L.flags, rooms: L.rooms || [] });
   g.zMin = g.flags.scroll ? 1 : Math.max(0.5, VW / g.LW);
   g.spawn = L.ents.find(e => e.t === 'spawn');
   const kd = L.ents.find(e => e.t === 'key'); g.keyHome = { x: kd.x * TS + 5, y: kd.floor * TS - 9 };
@@ -393,6 +524,12 @@ function compile(g, n) {
   g.slimeDefs = E('slime').map(e => ({ x: e.x * TS, x2: e.x2 * TS, y: e.floor * TS, big: !!e.big, spiky: !!e.spiky, spd: e.spd || 22 }));
   g.tiltDefs = E('tilt').map(e => ({ x: e.x * TS, y: e.y * TS, w: e.w * TS, x2: e.x2 * TS }));
   g.keyRun = kd.run ? { lo: kd.run[0] * TS + 5, hi: kd.run[1] * TS + 5 } : null;
+  g.seeDefs = E('seesaw').map(e => ({ x: e.x * TS, y: e.floor * TS - 6 }));
+  g.meltDefs = E('melt').map(e => ({ x: e.x * TS, y: e.floor * TS, w: (e.w || 2) * TS }));
+  g.searchDefs = E('search').map(e => ({ x: e.x * TS, x2: e.x2 * TS, y: e.floor * TS, w: 30, spd: e.spd || 36, off: e.off || 0 }));
+  g.bombDefs = E('bombs').map(e => ({ x: e.x * TS, y: e.floor * TS - 16, w: 18, h: 16 }));
+  g.cannonDefs = E('cannon').map(e => ({ x: e.x * TS, y: e.floor * TS - 16, w: 20, h: 16, sig: e.sig || null }));
+  const k2 = L.ents.find(e => e.t === 'key2'); g.key2Home = k2 ? { x: k2.x * TS + 5, y: k2.floor * TS - 9 } : null;
   g.fireDefs = E('fire').map(e => ({ x: e.x * TS, y: (e.floor - e.h) * TS, w: (e.w || 1) * TS, h: e.h * TS, sig: e.sig || null, period: e.period || 0, on: e.on || 0.5, off: e.off || 0 }));
   const letters = new Set();
   g.sigTiles = {}; g.crumbTiles = []; g.flipTiles = [];
@@ -403,7 +540,7 @@ function compile(g, n) {
     if (c === '[' || c === ']') g.flipTiles.push(y * L.w + x);
   }
   g.plateDefs.forEach(p => letters.add(p.sig)); g.leverDefs.forEach(p => letters.add(p.sig));
-  g.fanDefs.forEach(f => f.sig && letters.add(f.sig)); g.fireDefs.forEach(f => f.sig && letters.add(f.sig)); g.crushDefs.forEach(c => c.sig && letters.add(c.sig));
+  g.fanDefs.forEach(f => f.sig && letters.add(f.sig)); g.cannonDefs.forEach(c => c.sig && letters.add(c.sig)); g.fireDefs.forEach(f => f.sig && letters.add(f.sig)); g.crushDefs.forEach(c => c.sig && letters.add(c.sig));
   if (g.flags.doorSig) letters.add(g.flags.doorSig);
   g.letters = [...letters];
 }
@@ -422,7 +559,12 @@ function reset(g, keep) {
     sig: {}, plates: g.plateDefs.map(() => 0), levers: g.leverDefs.map(() => 0), crates: [], lifts: [], bals: [], bridges: [], crumb: {}, rafts: [], crush: [],
     torches: g.torchDefs.map(() => 0), seq: {}, flip: 0, flipCd: 0, ghost: {}, light: { ph: 0, t: 0 }, key: { x: g.keyHome.x, y: g.keyHome.y, carrier: -1, used: false, hx: g.keyHome.x, hop: 0, hf: 0, ht: 0, trap: 0 }, door: { open: false, t: 0 },
     slimes: g.slimeDefs.map(d => { const w = d.big ? 22 : 12, h = d.big ? 16 : 9; return { x: d.x, y: d.y - h, w, h, dir: 1, vx: 0, sq: 0, dead: 0, big: d.big ? 1 : 0, spiky: d.spiky ? 1 : 0 }; }),
-    tilts: g.tiltDefs.map(d => ({ x: d.x, y: d.y, w: d.w, h: 6, v: 0, dx: 0, dy: 0, n: 0, lean: 0, idle: 0, isTilt: true })) };
+    tilts: g.tiltDefs.map(d => ({ x: d.x, y: d.y, w: d.w, h: 6, v: 0, dx: 0, dy: 0, n: 0, lean: 0, idle: 0, isTilt: true })),
+    sees: g.seeDefs.flatMap((d, i) => [{ x: d.x, y: d.y, w: 30, h: 6, dx: 0, dy: 0, pair: i * 2 + 1, kick: 0, isSee: true }, { x: d.x + 40, y: d.y, w: 30, h: 6, dx: 0, dy: 0, pair: i * 2, kick: 0, isSee: true }]),
+    melts: g.meltDefs.map(d => ({ x: d.x, y: d.y, w: d.w, h: 8, dx: 0, dy: 0, hp: 1, st: 0, tmr: 0, isMelt: true })),
+    bombs: g.bombDefs.map(d => ({ x: d.x + 9, y: d.y + 4, carrier: -1, fuse: 0, from: -1 })), blast: {},
+    key2: g.key2Home ? { x: g.key2Home.x, y: g.key2Home.y, carrier: -1, used: false } : null,
+    lava: g.flags.rise ? g.flags.rise.from : 0 };
   for (const l of g.letters) S.sig[l] = { on: false, latched: false, tmr: 0, gate: true, open: 0, show: 0 };
   g.crateDefs.forEach(d => S.crates.push({ x: d.x, y: d.y, w: d.w, h: d.h, vx: 0, vy: 0, dx: 0, pushN: 0, needN: 1, isCrate: true }));
   g.liftDefs.forEach(d => S.lifts.push({ x: d.x, y: d.y, w: d.w, h: 6, u: 0, dir: 1, pause: 0, hold: 0, dx: 0, dy: 0, r: 0, needN: 0, isLift: true }));
@@ -432,7 +574,7 @@ function reset(g, keep) {
   g.crushDefs.forEach(d => S.crush.push({ x: d.x, y: d.y, w: d.w, h: d.h, dx: 0, dy: 0, ct: 0, isCrush: true }));
   g.crumbTiles.forEach(i => S.crumb[i] = [0, 0]);
   g.crateOn = S.crates.map(() => null);
-  g.players.forEach(p => { Object.assign(p, { vx: 0, vy: 0, dead: 99, inside: false, on: null, grounded: false, dx: 0, squash: 0, coyote: 0, buffer: 0, row: 0 }); });
+  g.players.forEach(p => { Object.assign(p, { vx: 0, vy: 0, dead: 99, inside: false, on: null, grounded: false, dx: 0, squash: 0, coyote: 0, buffer: 0, row: 0, cn: -1, ct: 0, fly: 0 }); });
   // line up on the start ground; anyone who doesn't fit stands on a friend's head
   g.players.forEach(p => { const y0 = g.spawn.floor * TS - PH; let done = false;
     for (let i = 0; i < 20 && !done; i++) { p.x = g.spawn.x * TS + i * 12; p.y = y0; done = free(g, p) && groundOf(g, p).length > 0; }
@@ -448,14 +590,14 @@ function needOf(g, n) { const all = Math.max(1, g.players.length); if (n === 'al
 
 function addPlayer(g, slot) {
   if (g.players.some(p => p.slot === slot)) return null;
-  const p = { slot, x: 0, y: 0, w: PW, h: PH, vx: 0, vy: 0, face: 1, grounded: false, coyote: 0, buffer: 0, on: null, dx: 0, cut: false, squash: 0, dead: 0, inside: false, anim: 0, row: 0, q: 0, m: 0, blinkT: 2 + Math.random() * 3, isPlayer: true, input: { x: 0, jump: false, jumpP: false, downP: false } };
+  const p = { slot, cn: -1, ct: 0, fly: 0, x: 0, y: 0, w: PW, h: PH, vx: 0, vy: 0, face: 1, grounded: false, coyote: 0, buffer: 0, on: null, dx: 0, cut: false, squash: 0, dead: 0, inside: false, anim: 0, row: 0, q: 0, m: 0, blinkT: 2 + Math.random() * 3, isPlayer: true, input: { x: 0, jump: false, jumpP: false, downP: false } };
   place(g, p); g.players.push(p); g.players.sort((a, b) => a.slot - b.slot);
   if (!adapt(g)) fx(g, 'join', p.x + 5, p.y + 7, slot);
   return p;
 }
 function removePlayer(g, slot) {
   const i = g.players.findIndex(p => p.slot === slot); if (i < 0) return;
-  if (g.S.key.carrier === slot) g.S.key.carrier = -1;
+  if (g.S.key.carrier === slot) g.S.key.carrier = -1; if (g.S.key2 && g.S.key2.carrier === slot) g.S.key2.carrier = -1;
   g.players.splice(i, 1);
   adapt(g);
 }
@@ -513,6 +655,7 @@ function tileRect(g, tx, ty, e, ax, d) {
   const R = { x: tx * TS, y: ty * TS, w: TS, h: TS, ch: c };
   if (c === '#' || c === 'o' || c === '=' || c === '<' || c === '>') return R;
   if (c === '%') return g.S.crumb[ty * g.W + tx][0] < 2 ? R : null;
+  if (c === '&') return g.S.blast[ty * g.W + tx] ? null : R;
   if (c === '[' || c === ']') return ((c === '[') === (g.S.flip === 0) && !g.S.ghost[ty * g.W + tx]) ? R : null;
   if (c === '-') return (ax === 'y' && d > 0 && e.y + e.h - d <= ty * TS + 0.01) ? { x: tx * TS, y: ty * TS, w: TS, h: 4, ch: c } : null;
   if (c >= '1' && c <= '4') return (e.isPlayer && e.slot === c.charCodeAt(0) - 49) ? null : R;
@@ -530,9 +673,11 @@ function solids(g, e, ax, d) {
   for (const l of S.rafts) if (l !== e && ov(e, l)) out.push(l);
   for (const l of S.crush) if (l !== e && ov(e, l)) out.push(l);
   for (const l of S.tilts) if (l !== e && ov(e, l)) out.push(l);
+  for (const l of S.sees) if (l !== e && ov(e, l)) out.push(l);
+  for (const l of S.melts) if (l.st === 0 && l !== e && ov(e, l)) out.push(l);
   for (const b of S.bals) for (const pn of b.pans) if (pn !== e && ov(e, pn)) out.push(pn);
   for (const b of S.bridges) if (b.st < 2 && b !== e && ov(e, b)) out.push(b);
-  for (const p of g.players) if (p !== e && alive(p) && ov(e, p)) out.push(p);
+  for (const p of g.players) if (p !== e && alive(p) && p.cn < 0 && ov(e, p)) out.push(p);
   if (e.isPlayer && !g.noWalls) for (const w of camWalls(g)) if (ov(e, w)) out.push(w);
   return out;
 }
@@ -548,13 +693,14 @@ function move(g, e, d, ax) {
 }
 function free(g, e) { return solids(g, e, 'y', 0).filter(r => r.ch !== '-' && ov(e, r)).length === 0; }
 function groundOf(g, e) { e.y += 1; const s = solids(g, e, 'y', 1).filter(r => ov(e, r)); e.y -= 1; return s; }
-const PLAT = r => r.isPlayer || r.isCrate || r.isLift || r.isPan || r.isBridge || r.isRaft || r.isCrush || r.isTilt;
+const PLAT = r => r.isPlayer || r.isCrate || r.isLift || r.isPan || r.isBridge || r.isRaft || r.isCrush || r.isTilt || r.isSee || r.isMelt;
 
 // ---------- death / restart ----------
 function kill(g, p, cause) {
   const S = g.S; if (!alive(p) || S.restartT > 0 || S.won) return;
   p.dead = 99; S.restartT = 1.2; S.deaths++; S.dc[p.slot] = (S.dc[p.slot] || 0) + 1; S.culprit = p.slot; S.cause = cause || 'oops'; S.lastCause = S.cause + '@' + Math.round(p.x) + ',' + Math.round(p.y) + '#' + p.slot;
-  if (S.key.carrier === p.slot) S.key.carrier = -1;
+  if (S.key.carrier === p.slot) S.key.carrier = -1; if (S.key2 && S.key2.carrier === p.slot) S.key2.carrier = -1;
+  for (const b of S.bombs) if (b.carrier === p.slot) b.carrier = -1;
   fx(g, 'die', p.x + 5, p.y + 7, p.slot);
 }
 
@@ -583,6 +729,9 @@ function step(g, dt) {
   for (const k in S.ghost) { const tx = k % g.W, ty = Math.floor(k / g.W), r = { x: tx * TS, y: ty * TS, w: TS, h: TS }; if (!g.players.some(p => alive(p) && ov(p, r)) && !S.crates.some(c => ov(c, r))) delete S.ghost[k]; }
   g.torchDefs.forEach((t, i) => { if (!S.torches[i] && act.some(p => Math.abs(p.x + 5 - t.x) < 10 && p.y + p.h > t.y - 24 && p.y < t.y)) { S.torches[i] = 1; fx(g, 'torch', t.x, t.y - 16); } });
   updKeyDoor(g, dt);
+  updBombs(g, dt);
+  for (let i = 0; i < g.searchDefs.length; i++) { const bx = searchX(g, i), d = g.searchDefs[i]; for (const p of g.players) if (alive(p) && p.cn < 0 && p.x + p.w > bx + 2 && p.x < bx + d.w - 2 && (Math.abs(p.vx) > 8 || !p.grounded) && !covered(g, p)) kill(g, p, 'spotted'); }
+  if (g.flags.rise) { const R = g.flags.rise; if (S.t > R.delay && !S.won) S.lava = Math.max(R.top, S.lava - R.spd * dt); for (const p of g.players) if (alive(p) && p.y + p.h > S.lava + 3) kill(g, p, 'lava'); }
   for (let i = 0; i < g.fireDefs.length; i++) if (fireLit(g, i)) { const f = g.fireDefs[i], r = { x: f.x + 1, y: f.y + 2, w: f.w - 2, h: f.h - 2 }; for (const p of g.players) if (alive(p) && ov(p, r)) kill(g, p, 'fire'); }
   for (const sl of S.slimes) if (!sl.dead) { const h = slimeHurt(sl); for (const p of g.players) if (alive(p) && ov(p, h)) kill(g, p, 'slime'); }
   for (const sd of g.sawDefs) { const s = sawPos(g, sd); for (const p of g.players) if (alive(p)) { const cx = clamp(s.x, p.x, p.x + p.w), cy = clamp(s.y, p.y, p.y + p.h); if ((cx - s.x) ** 2 + (cy - s.y) ** 2 < 30) kill(g, p, 'saw'); } }
@@ -646,7 +795,7 @@ function updLifts(g, dt) {
     l.r = ridersOf(g, l) + S.crates.filter((c, ci) => g.crateOn[ci] === l).length; l.needN = need;
     const u0 = l.u;
     if (need === 0) { if (l.pause > 0) l.pause -= dt; else { l.u += l.dir * d.spd / dist * dt; if (l.u >= 1 || l.u <= 0) { l.u = clamp(l.u, 0, 1); l.dir *= -1; l.pause = 0.7; } } }
-    else { const go = d.exact ? l.r === need : l.r >= need; if (go) { l.u = approach(l.u, 1, d.spd / dist * dt); if (l.u >= 1) l.hold = 1.4; } else if (l.hold > 0 && l.u >= 1) l.hold -= dt; else l.u = approach(l.u, 0, d.spd / dist * dt); }
+    else { const go = d.exact ? l.r === need : l.r >= need; if (go) { l.u = approach(l.u, 1, d.spd / dist * dt); if (l.u >= 1) l.hold = 1.4; } else if (l.hold > 0 && l.u >= 1) l.hold -= dt; else if (l.u >= 1 && l.r > 0 && !d.exact) l.hold = 0; else l.u = approach(l.u, 0, d.spd / dist * dt); }
     const nx = d.x + (d.x2 - d.x) * l.u, ny = d.y + (d.y2 - d.y) * l.u;
     if (nonRiderBlock(g, l, nx, ny)) { l.u = u0; l.dx = l.dy = 0; return; }
     l.dx = nx - l.x; l.dy = ny - l.y; l.x = nx; l.y = ny; carryUp(g, l, l.dy);
@@ -656,6 +805,8 @@ function updMovers(g, dt) {
   const S = g.S;
   updLifts(g, dt);
   updTilts(g, dt);
+  updMelts(g, dt);
+  for (const sp of S.sees) sp.kick = approach(sp.kick, 0, dt * 4);
   S.rafts.forEach((r, i) => {
     const d = g.raftDefs[i], ab = aboardRaft(g, r), all = g.players.filter(alive).length; r.n = ab.length;
     const nR = ab.filter(p => p.input.x > 0).length, nL = ab.filter(p => p.input.x < 0).length; r.push = Math.max(nR, nL);
@@ -688,6 +839,38 @@ function updMovers(g, dt) {
     else if (b.st === 1) { b.tmr -= dt; if (b.tmr <= 0) { b.st = 2; b.tmr = 2.6; b.vy = 0; fx(g, 'break', b.x + b.w / 2, b.y); } }
     else if (b.st === 2) { b.vy += G * dt; b.y += b.vy * dt; b.tmr -= dt; if (b.tmr <= 0) { b.st = 0; b.y = d.y; } }
   });
+}
+// Melting ice floes: each rider wears them down; gone, they refreeze a few seconds later once nobody's in the way.
+function updMelts(g, dt) {
+  for (const m of g.S.melts) {
+    if (m.st === 0) { const r = ridersOf(g, m); if (r) { m.hp -= 0.45 * r * dt; if (m.hp <= 0) { m.hp = 0; m.st = 1; m.tmr = 3; fx(g, 'melt', m.x + m.w / 2, m.y); } } }
+    else { m.tmr -= dt; if (m.tmr <= 0 && !g.players.some(p => alive(p) && ov(p, m))) { m.st = 0; m.hp = 1; fx(g, 'freeze', m.x + m.w / 2, m.y); } }
+  }
+}
+// Searchlights sweep back and forth across their stretch.
+function searchX(g, i) { const d = g.searchDefs[i], span = d.x2 - d.w - d.x, per = 2 * span / d.spd, ph = (((g.S.t + d.off) % per) + per) % per; return d.x + (ph < per / 2 ? ph * d.spd : span - (ph - per / 2) * d.spd); }
+// Something solid overhead keeps you out of the light.
+function covered(g, p) { const tx = Math.floor((p.x + p.w / 2) / TS), y1 = Math.floor(p.y / TS) - 1; for (let ty = 0; ty <= y1; ty++) { const r = tileRect(g, tx, ty, p, 'y', 0); if (r && r.ch && r.ch !== '-') return true; } return false; }
+// Bombs: down at the dispenser to take one. The fuse is short; down next to a friend passes it (and resets the fuse).
+// Touch a cracked wall with it to blow the wall open.
+function updBombs(g, dt) {
+  const S = g.S, live = g.players.filter(alive);
+  S.bombs.forEach((b, i) => {
+    const d = g.bombDefs[i];
+    if (b.carrier < 0) { b.x = d.x + 9; b.y = d.y + 4; const p = live.find(q => q.input.downP && q.cn < 0 && ov(q, d) && !S.bombs.some(o => o.carrier === q.slot)); if (p) { b.carrier = p.slot; b.fuse = FUSE; b.from = -1; p.input.downP = false; fx(g, 'fuse', b.x, b.y, p.slot); } return; }
+    const car = g.players.find(p => p.slot === b.carrier); if (!car || !alive(car)) { b.carrier = -1; return; }
+    b.x = car.x + 5; b.y = car.y - 6; b.fuse -= dt;
+    if (b.fuse <= 0) { b.carrier = -1; fx(g, 'boom', car.x + 5, car.y + 7); kill(g, car, 'bomb'); return; }
+    const reach = { x: car.x - 3, y: car.y - 3, w: car.w + 6, h: car.h + 6 };
+    for (let ty = Math.floor(reach.y / TS); ty <= Math.floor((reach.y + reach.h) / TS); ty++) for (let tx = Math.floor(reach.x / TS); tx <= Math.floor((reach.x + reach.w) / TS); tx++)
+      if (ty >= 0 && ty < g.H && tx >= 0 && tx < g.W && g.grid[ty][tx] === '&' && !S.blast[ty * g.W + tx]) { blast(g, tx, ty); b.carrier = -1; return; }
+    if (car.input.downP) { const to = live.filter(p => p !== car && p.cn < 0 && ov(p, reach) && !S.bombs.some(o => o.carrier === p.slot)).sort((a, c) => (a.slot === b.from) - (c.slot === b.from))[0];
+      if (to) { b.from = car.slot; b.carrier = to.slot; b.fuse = FUSE; car.input.downP = false; fx(g, 'pass', to.x + 5, to.y, to.slot); } }
+  });
+}
+function blast(g, tx, ty) {
+  const S = g.S; for (let y = ty - 4; y <= ty + 4; y++) for (let x = tx - 3; x <= tx + 3; x++) if (y >= 0 && y < g.H && x >= 0 && x < g.W && g.grid[y][x] === '&') S.blast[y * g.W + x] = 1;
+  fx(g, 'boom', tx * TS + 5, ty * TS + 5); S.blastN = (S.blastN || 0) + 1;
 }
 function slimeHurt(s) { return s.spiky ? { x: s.x + 1, y: s.y + 1, w: s.w - 2, h: s.h - 1 } : { x: s.x + 2, y: s.y + 4, w: s.w - 4, h: s.h - 4 }; }
 // Slimes walk back and forth. They turn at the ends of their patrol and at crates, and stand still on red.
@@ -754,7 +937,7 @@ function updCrates(g, dt) {
     if (Math.abs(c.x - tx * TS) < 4) { let empty = true; for (let k = 0; k < cols; k++) if (tileRect(g, tx + k, by, c, 'y', 1)) empty = false; if (empty) c.x = tx * TS; }
     c.vy = Math.min(c.vy + G * dt, MAXFALL); const v = c.vy;
     if (move(g, c, c.vy * dt, 'y')) { if (v > 140) fx(g, 'thud', c.x + c.w / 2, c.y + c.h); c.vy = 0; }
-    const gr = groundOf(g, c); g.crateOn[i] = gr.find(r => r.isLift || r.isPan || r.isBridge || r.isCrate || r.isRaft || r.isCrush || r.isTilt) || null;
+    const gr = groundOf(g, c); g.crateOn[i] = gr.find(r => r.isLift || r.isPan || r.isBridge || r.isCrate || r.isRaft || r.isCrush || r.isTilt || r.isSee || r.isMelt) || null;
     for (const sl of S.slimes) if (!sl.dead && ov(c, sl)) { sl.dead = 1; fx(g, 'squish', sl.x + sl.w / 2, sl.y + sl.h); }
     if (c.y > g.LH + 40) { c.x = d.x; c.y = d.y; c.vy = 0; c.vx = 0; }
     c.dx = c.x - x0;
@@ -769,6 +952,11 @@ function flipToggle(g) {
 function updPlayer(g, p, dt) {
   if (!alive(p)) return;
   const S = g.S, inp = p.input, xs = p.x;
+  if (p.cn >= 0) { // inside a cannon: wait for the bang
+    const c = g.cannonDefs[p.cn]; p.x = c.x + c.w / 2 - p.w / 2; p.y = c.y - p.h - 1; p.vx = p.vy = 0; p.ct -= dt; p.dx = 0;
+    if (p.ct <= 0) { const far = !!(c.sig && S.sig[c.sig].on), v = far ? CANNON_FAR : CANNON_NEAR; p.cn = -1; p.vx = v[0]; p.vy = v[1]; p.fly = far ? 0.75 : 0.25; p.cut = true; p.grounded = false; p.on = null; fx(g, 'cannon', c.x + c.w / 2, c.y, p.slot); }
+    return; }
+  if (inp.downP && p.grounded) for (let i = 0; i < g.cannonDefs.length; i++) { const c = g.cannonDefs[i]; if (ov(p, { x: c.x, y: c.y - 4, w: c.w, h: c.h + 4 }) && !g.players.some(q => q.cn === i) && !S.bombs.some(b => b.carrier === p.slot)) { p.cn = i; p.ct = 0.45; inp.downP = false; fx(g, 'cannonin', c.x + c.w / 2, c.y, p.slot); return; } }
   g.noWalls = true;
   if (p.x < S.wl) { move(g, p, S.wl - p.x, 'x'); if (p.x < S.wl - 1 && g.flags.scroll) { g.noWalls = false; kill(g, p, 'squash'); return; } }
   if (p.x + p.w > S.wr) move(g, p, S.wr - p.x - p.w, 'x');
@@ -780,7 +968,7 @@ function updPlayer(g, p, dt) {
   const onIce = gr0.length > 0 && gr0.every(r => r.ch === '=');
   const heavy = g.flags.heavy && S.key.carrier === p.slot && !S.key.used;
   const ix = rowing ? 0 : inp.x;
-  p.vx = approach(p.vx, ix * SPEED * (heavy ? 0.65 : 1), (p.grounded ? (onIce ? 140 : 1000) : 650) * dt); if (inp.x) p.face = inp.x;
+  if (p.fly > 0) { p.fly -= dt; if (p.grounded) p.fly = 0; } else p.vx = approach(p.vx, ix * SPEED * (heavy ? 0.65 : 1), (p.grounded ? (onIce ? 140 : 1000) : 650) * dt); if (inp.x) p.face = inp.x;
   if (inp.jumpP) p.buffer = 0.12; else p.buffer -= dt;
   p.coyote = p.grounded ? 0.09 : p.coyote - dt;
   const loaded = g.players.some(o => o !== p && o.on === p && alive(o));
@@ -812,6 +1000,10 @@ function updPlayer(g, p, dt) {
     const belt = beltOf(gr); if (belt) move(g, p, belt * dt, 'x');
     for (const r of gr) if (r.ch === '%') { const k = Math.floor(r.y / TS) * g.W + Math.floor(r.x / TS); if (S.crumb[k][0] === 0) { S.crumb[k] = [1, 0.6]; fx(g, 'crumble', r.x + 5, r.y); } }
   }
+  if (p.grounded && !wasG && vyb > 160 && p.on && p.on.isSee) { // landed hard on a seesaw: launch whoever's on the other end
+    const o = S.sees[p.on.pair]; let k = 0; p.on.kick = 1; o.kick = -1;
+    for (const q of g.players) if (q !== p && alive(q) && q.on && baseOf(q) === o) { q.vy = -Math.min(560, vyb * 1.2); q.cut = true; q.grounded = false; q.on = null; q.y -= 0.5; k++; }
+    if (k) fx(g, 'catapult', o.x + o.w / 2, o.y, p.slot); }
   if (p.grounded && !wasG && vyb > 90) { p.squash = Math.min(1, vyb / 260); fx(g, 'land', p.x + 5, p.y + 14, p.slot); }
   p.squash = approach(p.squash, 0, dt * 6);
   p.anim += dt * (Math.abs(p.vx) / SPEED + (rowing ? 1.2 : 0)); p.blinkT -= dt; if (p.blinkT < 0) p.blinkT = 2 + Math.random() * 3;
@@ -841,17 +1033,21 @@ function updCrumbs(g, dt) {
   }
 }
 function updKeyDoor(g, dt) {
-  const S = g.S, k = S.key, live = g.players.filter(alive);
-  if (!k.used) {
-    const car = g.players.find(p => p.slot === k.carrier);
+  const S = g.S, live = g.players.filter(alive), keys = S.key2 ? [S.key, S.key2] : [S.key];
+  keys.forEach((k, ki) => {
+    if (k.used) return;
+    const home = ki ? g.key2Home : g.keyHome, car = g.players.find(p => p.slot === k.carrier);
     if (car && alive(car)) {
-      const tx = car.x + 5, ty = car.y - 8; k.x += (tx - k.x) * Math.min(1, dt * 14); k.y += (ty - k.y) * Math.min(1, dt * 14);
-      if (g.flags.pass && car.input.downP && !ov(car, g.door)) { const near = { x: car.x - 3, y: car.y - 3, w: car.w + 6, h: car.h + 6 }; const to = live.filter(p => p !== car && ov(p, near)).sort((a, b) => (a.slot === k.from) - (b.slot === k.from) || a.y - b.y)[0]; if (to) { k.from = car.slot; k.carrier = to.slot; fx(g, 'pass', to.x + 5, to.y, to.slot); } }
-    } else { k.carrier = -1; if (g.keyRun) runKey(g, k, live, dt); else { k.x += (g.keyHome.x - k.x) * Math.min(1, dt * 4); k.y += (g.keyHome.y - k.y) * Math.min(1, dt * 4); }
-      const kb = { x: k.x - 7, y: k.y - 6, w: 14, h: 13 }; const c = live.find(p => ov(p, kb)); if (c) { k.carrier = c.slot; fx(g, 'key', k.x, k.y, c.slot); } }
+      const tx = car.x + 5 + (ki ? 3 : 0), ty = car.y - 8 - (ki ? 4 : 0); k.x += (tx - k.x) * Math.min(1, dt * 14); k.y += (ty - k.y) * Math.min(1, dt * 14);
+      if (g.flags.pass && car.input.downP && !ov(car, g.door)) { const near = { x: car.x - 3, y: car.y - 3, w: car.w + 6, h: car.h + 6 }; const to = live.filter(p => p !== car && ov(p, near) && !keys.some(o => o !== k && o.carrier === p.slot)).sort((a, b) => (a.slot === k.from) - (b.slot === k.from) || a.y - b.y)[0]; if (to) { k.from = car.slot; k.carrier = to.slot; fx(g, 'pass', to.x + 5, to.y, to.slot); } }
+    } else {
+      k.carrier = -1; if (!ki && g.keyRun) runKey(g, k, live, dt); else { k.x += (home.x - k.x) * Math.min(1, dt * 4); k.y += (home.y - k.y) * Math.min(1, dt * 4); }
+      const kb = { x: k.x - 7, y: k.y - 6, w: 14, h: 13 }; const c = live.find(p => ov(p, kb) && p.cn < 0 && !keys.some(o => o !== k && o.carrier === p.slot)); if (c) { k.carrier = c.slot; fx(g, 'key', k.x, k.y, c.slot); }
+    }
     const c2 = g.players.find(p => p.slot === k.carrier);
-    if (c2 && alive(c2) && ov(c2, g.door)) { k.used = true; k.carrier = -1; S.door.open = true; fx(g, 'door', g.door.x + 10, g.door.y + 8); if (g.flags.doorSig) S.sig[g.flags.doorSig].latched = true; }
-  }
+    if (c2 && alive(c2) && ov(c2, g.door)) { k.used = true; k.carrier = -1; fx(g, keys.every(o => o.used) ? 'door' : 'keyin', g.door.x + 10, g.door.y + 8); }
+  });
+  if (!S.door.open && keys.every(k => k.used)) { S.door.open = true; if (g.flags.doorSig) S.sig[g.flags.doorSig].latched = true; }
   if (S.door.open) { S.door.t = Math.min(1, S.door.t + dt * 3); for (const p of live) if (p.input.downP && ov(p, g.door)) { p.inside = true; fx(g, 'enter', g.door.x + 10, g.door.y + 12, p.slot); } }
   if (!S.won && g.players.length && g.players.every(p => p.inside)) { S.won = true; fx(g, 'win', S.cam + VW / 2, 60); }
 }
@@ -875,9 +1071,9 @@ function predictStep(world, p, dt) {
 }
 
 // ---------- networking helpers ----------
-const PKEYS = ['slot', 'x', 'y', 'vx', 'vy', 'face', 'gr', 'sq', 'an', 'dead', 'ins', 'row', 'q', 'm', 'co', 'bu', 'cut'];
+const PKEYS = ['slot', 'x', 'y', 'vx', 'vy', 'face', 'gr', 'sq', 'an', 'dead', 'ins', 'row', 'q', 'm', 'co', 'bu', 'cut', 'cn', 'ct', 'fl'];
 function snapshot(g) {
-  return { li: g.li, n: g.n, S: g.S, P: g.players.map(p => ({ slot: p.slot, x: p.x, y: p.y, vx: p.vx, vy: p.vy, face: p.face, gr: p.grounded, sq: p.squash, an: p.anim, dead: p.dead, ins: p.inside, row: p.row, q: p.q, m: p.m, co: p.coyote, bu: p.buffer, cut: p.cut })), fx: g.fx.splice(0) };
+  return { li: g.li, n: g.n, S: g.S, P: g.players.map(p => ({ slot: p.slot, x: p.x, y: p.y, vx: p.vx, vy: p.vy, face: p.face, gr: p.grounded, sq: p.squash, an: p.anim, dead: p.dead, ins: p.inside, row: p.row, q: p.q, m: p.m, co: p.coyote, bu: p.buffer, cut: p.cut, cn: p.cn == null ? -1 : p.cn, ct: p.ct || 0, fl: p.fly || 0 })), fx: g.fx.splice(0) };
 }
 // Network form: players as short arrays (booleans as 0/1), and no camera bookkeeping. About 40% smaller.
 const SKIP = { camGY: 1, zl: 1, zHold: 1, lastCause: 1 };
@@ -892,7 +1088,7 @@ function applySnapshot(g, snap) {
   for (const q of snap.P) {
     let p = g.players.find(o => o.slot === q.slot);
     if (!p) { p = { slot: q.slot, w: PW, h: PH, isPlayer: true, input: { x: 0, jump: false, jumpP: false, downP: false } }; g.players.push(p); g.players.sort((a, b) => a.slot - b.slot); }
-    if (q.bl == null || p.blinkT == null) p.blinkT = p.blinkT == null ? 2 + Math.random() * 3 : p.blinkT; Object.assign(p, { x: q.x, y: q.y, vx: q.vx, vy: q.vy, face: q.face, grounded: q.gr, squash: q.sq, anim: q.an, dead: q.dead, inside: q.ins, row: q.row || 0, q: q.q, m: q.m, coyote: q.co, buffer: q.bu, cut: q.cut, on: null });
+    if (q.bl == null || p.blinkT == null) p.blinkT = p.blinkT == null ? 2 + Math.random() * 3 : p.blinkT; Object.assign(p, { x: q.x, y: q.y, vx: q.vx, vy: q.vy, face: q.face, grounded: q.gr, squash: q.sq, anim: q.an, dead: q.dead, inside: q.ins, row: q.row || 0, q: q.q, m: q.m, coyote: q.co, buffer: q.bu, cut: q.cut, cn: q.cn == null ? -1 : q.cn, ct: q.ct || 0, fly: q.fl || 0, on: null });
   }
 }
 function setInput(g, slot, x, jump, down, q) {
@@ -904,6 +1100,6 @@ function setInput(g, slot, x, jump, down, q) {
 }
 function clearEdges(g) { for (const p of g.players) { p.input.jumpP = false; p.input.downP = false; } }
 
-const api = { slimeHurt, fireLit, fireWarn, packSnap, unpackSnap, supportOf, MAXP, TS, VW, VH, ROWS, STEP, PW, PH, LEVELS, THEMES, createGame, compile, adapt, reset, step, camera, addPlayer, removePlayer, place, snapshot, serialize, applySnapshot, setInput, clearEdges, sawPos, crushPhase, tileRect, ov, needOf, predictStep, SH };
+const api = { searchX, slimeHurt, fireLit, fireWarn, packSnap, unpackSnap, supportOf, MAXP, TS, VW, VH, ROWS, STEP, PW, PH, LEVELS, THEMES, createGame, compile, adapt, reset, step, camera, addPlayer, removePlayer, place, snapshot, serialize, applySnapshot, setInput, clearEdges, sawPos, crushPhase, tileRect, ov, needOf, predictStep, SH };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.HP = api;
 })(typeof window !== 'undefined' ? window : globalThis);

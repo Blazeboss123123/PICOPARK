@@ -6,15 +6,16 @@ const P=(g,s)=>g.players.find(p=>p.slot===s);const put=(g,s,x,y)=>{const p=P(g,s
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)}};const f=v=>Math.round(v*10)/10;
 const T=HP.TS;
 // a spot on solid, open ground at row F, scanning from x in direction dir, avoiding crates and taken spots
-function spot(g,x,F,dir,taken){for(let k=0;k<80;k++,x+=dir*11){const a=Math.floor(x/T),b=Math.floor((x+9.9)/T);if(a<0||b>=g.W)break;const row=g.grid[F],up=g.grid[F-1];if(row[a]!=='#'||row[b]!=='#'||'#ABCDEabcde'.includes(up[a])||'#ABCDEabcde'.includes(up[b]))continue;
+function spot(g,x,F,dir,taken){for(let k=0;k<80;k++,x+=dir*11){const a=Math.floor(x/T),b=Math.floor((x+9.9)/T);if(a<0||b>=g.W)break;const row=g.grid[F],up=g.grid[F-1];if(row[a]!=='#'||row[b]!=='#'||'#&ABCDEabcde'.includes(up[a])||'#&ABCDEabcde'.includes(up[b]))continue;
   const r={x,y:F*T-14,w:10,h:14};if(g.S.crates.some(c=>HP.ov(r,c))||taken.some(t=>Math.abs(t-x)<10.5))continue;taken.push(x);return x}return null}
 // stand players side by side on unbroken ground from x; when the ground runs out, the rest stand on their heads
 function line(g,slots,x,F,dir){const placed=[];let cx=x;for(const s of slots){let okx=null;for(let k=0;k<3&&okx==null;k++){const a=Math.floor(cx/T),b=Math.floor((cx+9.9)/T),row=g.grid[F],up=g.grid[F-1];const r={x:cx,y:F*T-14,w:10,h:14};
-   if(a>=0&&b<g.W&&row[a]==='#'&&row[b]==='#'&&!'#ABCDEabcde'.includes(up[a])&&!'#ABCDEabcde'.includes(up[b])&&!g.S.crates.some(c=>HP.ov(r,c))&&!(g.fireDefs||[]).some(f=>HP.ov(r,f)))okx=cx;else cx+=dir*3}
+   if(a>=0&&b<g.W&&row[a]==='#'&&row[b]==='#'&&!'#&ABCDEabcde'.includes(up[a])&&!'#&ABCDEabcde'.includes(up[b])&&!g.S.crates.some(c=>HP.ov(r,c))&&!(g.fireDefs||[]).some(f=>HP.ov(r,f)))okx=cx;else cx+=dir*3}
   if(okx==null)break;put(g,s,okx,F*T-14);placed.push(okx);cx=okx+dir*11}
  const rest=slots.slice(placed.length);rest.forEach((s,i)=>{const base=placed[i%Math.max(1,placed.length)]??x;put(g,s,base,F*T-14-14*(1+Math.floor(i/Math.max(1,placed.length))))})}
 // fill any crate gaps before x with their crates, so the team can be placed anywhere
-function bridgeBefore(g,x){if(g.flags.light)g.flags.light={g:1e9,y:1,r:1};g.rooms.forEach(r=>{if((r.t==='fire'||r.t==='gate'||r.t==='buttons')&&r.x<x-1)g.S.sig[r.sig].latched=true;if(r.t==='crate'&&r.x<x){const c=g.S.crates.find(c=>Math.abs(c.x-(r.x+2)*T)<1);if(c){c.x=(r.x+12)*T;c.y=r.F*T}}})}
+function clearNew(g,x){g.rooms.forEach(r=>{if(r.x>=x-1)return;if(r.sig&&g.S.sig[r.sig])g.S.sig[r.sig].latched=true;if(r.t==='melt')for(let c=r.x+2;c<=r.x+19;c++)g.grid[r.F][c]='#';if(r.t==='cannon')for(let c=r.x+6;c<=r.x+20;c++)g.grid[r.F][c]='#'});for(let y=0;y<g.H;y++)for(let c=0;c<Math.min(g.W,x);c++)if(g.grid[y][c]==='&')g.S.blast[y*g.W+c]=1;g.searchDefs=g.searchDefs.filter(d=>d.x2>x*HP.TS);if(g.flags.rise)g.flags.rise=null}
+function bridgeBefore(g,x){clearNew(g,x);if(g.flags.light)g.flags.light={g:1e9,y:1,r:1};g.rooms.forEach(r=>{if((r.t==='fire'||r.t==='gate'||r.t==='buttons')&&r.x<x-1)g.S.sig[r.sig].latched=true;if(r.t==='crate'&&r.x<x){const c=g.S.crates.find(c=>Math.abs(c.x-(r.x+2)*T)<1);if(c){c.x=(r.x+12)*T;c.y=r.F*T}}})}
 for(let li=0;li<HP.LEVELS.length;li++)for(const n of [2,3,5,8]){
  const g0=G(li,n);if(!g0.rooms.length)continue;const name=g0.name+' n'+n;
  g0.rooms.forEach(rm=>{const Y=rm.F*T-14,tag=name+' '+rm.t+'@'+rm.x,slots=[...Array(n).keys()];

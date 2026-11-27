@@ -2,7 +2,7 @@
 
 A co-op pixel platformer for 2–8 players. You stack on each other, push crates together, hold doors and carry a key to the exit, and if anyone dies, everyone restarts.
 
-It has 25 levels across 5 worlds, local play (up to 4 people on one keyboard plus up to 4 gamepads) and online rooms of up to 8 with a lobby.
+It has 50 levels across 10 worlds, local play (up to 4 people on one keyboard plus up to 4 gamepads) and online rooms of up to 8 with a lobby.
 
 | World | Levels |
 |---|---|
@@ -51,6 +51,18 @@ Spread out is now a dark cavern lit by torches.
 
 New levels: **Slime time** (world 3) and **Lean on me** (world 4) replace Short leash and Moving day.
 
+## Worlds 6 to 10
+
+Fifty levels in ten worlds. The last five worlds each bring in mechanics of their own:
+
+- **Frostbite Summit:** seesaw catapults (jump from the pillar onto one end to launch whoever stands on the other up a cliff) and melting ice floes (they melt faster the more people stand on them).
+- **Haunted Hollow:** searchlights (anyone moving in the beam is caught; freeze, or hide under cover) and twin keys (the door needs two keys, carried by two different players).
+- **Glimmer Depths:** bomb relays. The fuse is too short to carry a bomb to the cracked wall alone, so pass it down the line (press down next to a friend).
+- **Thunder Spires:** cannons. Press down to climb in; someone holds the button to aim it across, and a lever on the far side locks the aim for the last one.
+- **Molten Core:** rising lava. Climb, ride the lifts and launch each other up before it catches you.
+
+These levels are built from rooms (`chain()` in `game.js`), and every room is checked at 2, 3, 5 and 8 players by `test/mech7.js`.
+
 ## Online lag
 
 Your own climber is predicted on your machine, so it responds instantly. The server's answer corrects it smoothly, and other players are shown about 70 ms in the past so they move smoothly. To test with fake lag, run `LAG_MS=60 node server.js`, which adds 60 ms each way.
@@ -90,7 +102,7 @@ On the free tier the server sleeps after about 15 minutes with no visitors, so t
 
 ## Files
 
-- `public/game.js` is the game simulation and all 25 levels. The server and the browser share it.
+- `public/game.js` is the game simulation and all 50 levels. The server and the browser share it.
 - `public/art.js` paints the pixel art in code: layered backgrounds for each world and the terrain for each level, built once and cached.
 - `public/index.html` draws the live game full-window, and handles sound, menus, the lobby and input.
 - `server.js` is the web server, the WebSocket code (hand-written, no packages) and the rooms.
