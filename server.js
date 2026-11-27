@@ -38,6 +38,7 @@ function wsAccept(req, socket) {
     head[0] = 0x81;
     try { socket.write(Buffer.concat([head, data])); } catch (e) { close(); }
   };
+  ws.backlog = () => socket.writableLength || 0; // bytes waiting to go out to a slow connection
   const ctrl = (op, payload) => { const p = payload || Buffer.alloc(0); try { socket.write(Buffer.concat([Buffer.from([0x80 | op, p.length]), p])); } catch (e) {} };
   ws.ping = () => ctrl(0x9);
   function close() { if (!ws.open) return; ws.open = false; try { ctrl(0x8); socket.end(); } catch (e) {} if (ws.onclose) ws.onclose(); }
@@ -105,7 +106,8 @@ server.on('upgrade', (req, socket) => {
   const ws = wsAccept(req, socket); if (!ws) return;
   if (LAG) { const raw = ws.send; ws.send = (str) => setTimeout(() => raw(str), LAG); }
   const c = { ws, room: null, slot: -1, name: '', lastMsg: Date.now(), n: 0, win: Date.now() };
-  ws.onmessage = (text) => { if (LAG) return void setTimeout(() => handle(text), LAG); handle(text); };
+  ws.onmessage = (text) => { if (LAG) return void setTimeout(() => safeHandle(text), LAG); safeHandle(text); };
+  const safeHandle = (text) => { try { handle(text); } catch (e) { console.error('message error', e); } };
   const handle = (text) => {
     // simple flood guard: max 120 messages per second
     const now = Date.now(); if (now - c.win > 1000) { c.win = now; c.n = 0; } if (++c.n > 120) return;
@@ -139,12 +141,15 @@ setInterval(() => {
   for (const room of rooms.values()) {
     if (room.state !== 'play' || !room.game) continue;
     const g = room.game;
-    for (let s = 0; s < steps * 2; s++) { HP.step(g, HP.STEP); HP.clearEdges(g); }
+    // one room going wrong must never stop the server (or the other rooms): restart that level and carry on
+    try { for (let s = 0; s < steps * 2; s++) { HP.step(g, HP.STEP); HP.clearEdges(g); } }
+    catch (e) { console.error('room ' + room.code + ' level ' + room.level + ' failed, restarting it', e); try { startLevel(room, room.level); } catch (e2) { toLobby(room); } continue; }
     if (g.S.won && !room.wonSent) { room.wonSent = true; room.done.add(room.level); }
     room.tick += steps;
-    if (room.tick >= 2) { room.tick = 0; const msg = '{"t":"s","d":' + HP.packSnap(g) + '}'; for (const c of room.clients) c.ws.send(msg); }
+    if (room.tick >= 2) { room.tick = 0; const msg = '{"t":"s","d":' + HP.packSnap(g) + '}'; for (const c of room.clients) if (c.ws.backlog() < 256 * 1024) c.ws.send(msg); } // a slow connection skips frames instead of piling them up
   }
 }, TICK / 2);
+process.on('uncaughtException', e => console.error('uncaught', e));
 setInterval(() => { for (const room of rooms.values()) for (const c of room.clients) c.ws.ping(); }, 20000);
 
 server.listen(PORT, () => console.log('Huddle Peak server on http://localhost:' + PORT));
