@@ -36,8 +36,20 @@ Most levels end with one or two teamwork rooms before the exit:
 - **Douse the fire:** a fire wall you can't jump; someone is boosted onto a ledge to hold the button that puts it out, and a button past the fire brings them across.
 - **Numbered switches:** press 1, 2, 3, 4 in order with barely a second between presses. They're too far apart to run, so everyone takes one and you count it out.
 - **Keep moving:** a bridge over spikes that only holds while someone runs left on a treadmill; a second treadmill on the far side brings the runner over.
+- **Squash the slime:** a slime patrols a tunnel too low to jump it in, so the team pushes a crate through and flattens it.
+- **Bounce pad:** a big slime walks under a high ledge. Bounce off its head to reach the button that holds the gate; a button past the gate lets the bouncer through.
+- **Lean on me:** a platform over lava drifts toward whichever side has more weight. Spread out to stop it before the fire, then lean together to cross while it's out.
+- **Pass it up:** with a heavy key the carrier can't jump, so the key goes up a stack of friends (press down next to one).
 
 Spread out is now a dark cavern lit by torches.
+
+## Enemies and keys
+
+- **Slimes** patrol back and forth. Touching their side ends the run; landing on their head bounces you higher than any jump. Spiky purple slimes hurt from every side. Crates flatten them, and they freeze on red light.
+- **Runaway key:** in some levels the key scampers away from you and hops over a lone chaser. Trap it between two players to grab it.
+- **Heavy key:** in Heavy duty you can't jump while carrying it, and you walk slower. Pass it to friends to get it up steps.
+
+New levels: **Slime time** (world 3) and **Lean on me** (world 4) replace Short leash and Moving day.
 
 ## Online lag
 
